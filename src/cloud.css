@@ -1,0 +1,17 @@
+.cloud-box { background: var(--navy); color: white; border-radius: 10px; padding: 17px; margin-bottom: 23px; }
+.cloud-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.cloud-head strong, .cloud-head small { display: block; }
+.cloud-head strong { font: 700 17px 'Newsreader'; }
+.cloud-head small { font-size: 8px; color: #a9babb; margin-top: 4px; }
+.sync-pill { font: 500 8px 'DM Mono'; text-transform: uppercase; padding: 5px 7px; border-radius: 10px; background: #ffffff14; color: #b9c7c7; }
+.sync-pill.synced { background: var(--lime); color: #28422f; }
+.sync-pill.error { background: var(--red); color: white; }
+.email-login { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 14px; }
+.email-login input { height: 37px !important; background: #ffffff12 !important; border-color: #ffffff26 !important; color: white !important; min-width: 0; }
+.email-login button, .google-button, .cloud-actions button { border: 1px solid #ffffff2b; background: #ffffff0b; color: white; border-radius: 6px; padding: 9px 11px; font-size: 8px; font-weight: 800; }
+.email-login button { background: var(--lime); color: #173327; border-color: var(--lime); }
+.google-button { width: 100%; margin-top: 7px; }
+.cloud-box > p { font-size: 8px; line-height: 1.5; color: #aebdbd; margin: 10px 0 0; }
+.cloud-actions { display: flex; gap: 7px; margin-top: 14px; }
+.cloud-actions button { display: flex; align-items: center; gap: 5px; }
+.cloud-actions button:first-child { background: var(--lime); border-color: var(--lime); color: #173327; }
