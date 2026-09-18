@@ -17,14 +17,15 @@ A focused, local-first preparation workspace for the Andhra Pradesh Police Sub I
 - Original practice questions with hints, worked explanations, difficulty, and target time
 - AP paper source library with provenance labels
 - Other-state official SI paper sources for topic-wise training
-- 50 mock-test blueprints: 40 sectionals and 10 full-paper simulations
+- 313 unique original questions across all five subject groups
+- 50 deterministic mock-test blueprints: 40 sectionals and 10 full 100-question simulations
 - Full-screen timer, question palette, answer state, hints, and review flags
 - Daily activity, streak, accuracy, subject diagnosis, and category-aware readiness
 - Browser persistence plus JSON export/import for backups
 
 ## Current content status
 
-The starter release contains a reviewed original question bank for daily drills and unique 25-question sectionals. Full-paper cards currently open a clearly labelled bank preview. Expanding the bank to 200+ verified unique items is the next editorial milestone.
+The current release contains 313 reviewed, original questions. Every full mock draws 100 unique items without repetition inside that attempt, and each numbered mock remains reproducible on retry. Questions may reappear across different numbered mocks so performance can be compared against a stable editorial bank.
 
 Lakshya does not claim a complete 20–25 year official AP SI archive because one could not be verified. The archive distinguishes official board sources, verified mirrors, and material that still needs review. Commercial books such as R.S. Aggarwal are linked as references and are not copied.
 
@@ -44,7 +45,7 @@ npm run build
 
 ## Storage and future sync
 
-Progress is stored in `localStorage` under `apsi-command:v1`. Use **Profile → Export JSON** for a portable backup. A future Supabase adapter can map the same profile, attempts, daily activity, and topic mastery objects to authenticated rows without changing the learning UI.
+Progress is stored in `localStorage` under `apsi-command:v1`. Use **Profile → Export JSON** for a portable backup. When Supabase environment variables are present, email magic-link or Google login automatically syncs the same state into an RLS-protected per-user row. Run [`supabase/migrations/001_user_state.sql`](supabase/migrations/001_user_state.sql) in the project SQL editor before enabling cloud sync.
 
 ## Source policy
 
