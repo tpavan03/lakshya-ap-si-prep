@@ -2,6 +2,10 @@
   <img src="public/lakshya-banner.svg" alt="Lakshya AP SI Prep Desk" width="100%" />
 </div>
 
+<p align="center">
+  <a href="https://lakshya-ap-si-prep.vercel.app"><strong>Open the live preparation desk →</strong></a>
+</p>
+
 # Lakshya · AP SI Prep Desk
 
 A focused, local-first preparation workspace for the Andhra Pradesh Police Sub Inspector examination. Lakshya turns the official syllabus into a daily workflow: learn a concept, solve timed questions, review errors, and measure readiness.
