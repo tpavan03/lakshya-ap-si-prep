@@ -1,3 +1,7 @@
+import { apLanguageQuestions } from './questions/apLanguage'
+import { generalStudiesQuestions } from './questions/generalStudies'
+import { quantQuestions } from './questions/quant'
+
 export type Subject = 'Arithmetic' | 'Reasoning' | 'General Studies' | 'AP Focus' | 'English'
 
 export type Question = {
@@ -19,7 +23,7 @@ const q = (id: string, subject: Subject, topic: string, question: string, option
   id, subject, topic, question, options, answer, explanation, hint, seconds, difficulty, source: exam ? 'Adapted practice — verify against linked archive' : 'Original practice', exam,
 })
 
-export const questions: Question[] = [
+const starterQuestions: Question[] = [
   q('a01','Arithmetic','Percentages','A number increases from 240 to 300. What is the percentage increase?',['20%','25%','30%','60%'],1,'The increase is 60. Divide 60 by 240 and multiply by 100: 25%.','Find change ÷ original.',45,'Easy'),
   q('a02','Arithmetic','Ratio','The ratio of men to women is 7:5. If the total is 144, how many are women?',['48','60','72','84'],1,'There are 12 equal parts. Each part is 12, so women = 5 × 12 = 60.','Convert the total into 12 equal parts.',50,'Easy'),
   q('a03','Arithmetic','Time & work','A completes a job in 12 days and B in 18 days. How long do they take together?',['6.2 days','7.2 days','8 days','9 days'],1,'Combined daily work is 1/12 + 1/18 = 5/36. Time = 36/5 = 7.2 days.','Add their one-day work.',70),
@@ -57,6 +61,18 @@ export const questions: Question[] = [
   q('e04','English','Comprehension','A report is concise when it does what?',['Uses the most words possible','States relevant facts briefly','Avoids evidence','Uses only technical terms'],1,'Concise writing conveys necessary information clearly without needless words.','Concise means brief and complete.',35,'Easy'),
 ]
 
+const normalizeStem = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+const questionKey = (item: Question) => `${normalizeStem(item.question)}|${item.options.map(normalizeStem).join('|')}`
+
+export const questions: Question[] = [
+  ...starterQuestions,
+  ...quantQuestions,
+  ...generalStudiesQuestions,
+  ...apLanguageQuestions,
+].filter((item, index, all) =>
+  all.findIndex(candidate => questionKey(candidate) === questionKey(item)) === index,
+)
+
 export type Topic = {
   id: string
   subject: Subject
@@ -87,15 +103,16 @@ export const archives = [
 export const mockSeries = Array.from({length: 50}, (_, index) => {
   const number = index + 1
   const full = number % 5 === 0
+  const fullPaper = Math.floor(number / 5) % 2 === 1 ? 'Paper I' : 'Paper II'
   const subjects: Subject[] = ['Arithmetic','Reasoning','General Studies','AP Focus','English']
   return {
     id: `mock-${String(number).padStart(2,'0')}`,
     number,
-    title: full ? `Full Prelims Simulation ${number / 5}` : `${subjects[index % subjects.length]} Sectional ${number}`,
+    title: full ? `${fullPaper} Simulation ${Math.ceil(number / 10)}` : `${subjects[index % subjects.length]} Sectional ${number}`,
     type: full ? 'Full paper' : 'Sectional',
     questions: full ? 100 : 25,
     minutes: full ? 180 : 30,
-    subject: full ? 'Mixed' : subjects[index % subjects.length],
+    subject: full ? fullPaper : subjects[index % subjects.length],
     locked: number > 1 && number % 5 !== 0,
   }
 })
