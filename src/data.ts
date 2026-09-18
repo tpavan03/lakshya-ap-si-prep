@@ -77,6 +77,7 @@ export const topics: Topic[] = [
 ]
 
 export const archives = [
+  {year:'2026',title:'AP SI official recruitment notification',detail:'Current main SI cycle: pattern, eligibility, physical standards and syllabus',url:'https://slprb.ap.gov.in/2026_PDFS/SLPRB_AP_SI_Notification_2026.pdf',status:'Official board PDF'},
   {year:'2023',title:'AP SI Preliminary Written Test',detail:'Paper I: Arithmetic & Reasoning · Paper II: General Studies',url:'https://slprb.ap.gov.in/',status:'Official portal'},
   {year:'2022',title:'AP SI recruitment notification',detail:'Official pattern, syllabus, eligibility and selection rules',url:'https://entri.app/blog/wp-content/uploads/2022/11/ap-police-si-notification.pdf',status:'Notification mirror'},
   {year:'2018',title:'AP Police SI paper archive',detail:'Use the linked scan for paper practice; explanations here are editorial.',url:'https://slprb.ap.gov.in/',status:'Source index'},
