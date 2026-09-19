@@ -74,9 +74,246 @@ function Syllabus({ onPractice }: { onPractice: (s: Subject) => void }) {
   return <><PageHead eyebrow="Official syllabus map" title="Learn in the right order." copy="Each unit starts with the concept map, moves to a trusted source, and ends in timed questions." action={<a className="secondary-button" href="https://slprb.ap.gov.in/2026_PDFS/SLPRB_AP_SI_Notification_2026.pdf" target="_blank"><FileText size={17}/> 2026 notice</a>}/><div className="pattern-row"><div><span>PRELIMS / PAPER I</span><strong>Arithmetic + reasoning</strong><small>100 questions · 100 marks · 180 minutes</small></div><div><span>PRELIMS / PAPER II</span><strong>General studies</strong><small>100 questions · 100 marks · 180 minutes</small></div><div><span>FINAL / MERIT</span><strong>Papers III + IV</strong><small>200 questions each · confirm post rules</small></div></div><div className="topic-list">{topics.map((topic,index)=>{ const isOpen = open === topic.id; return <article className={`topic-card ${isOpen?'expanded':''}`} key={topic.id}><button className="topic-heading" onClick={()=>setOpen(isOpen?'':topic.id)}><span className="topic-number">{String(index+1).padStart(2,'0')}</span><div><small>{topic.subject}</small><h2>{topic.title}</h2><p>{topic.description}</p></div><div className="topic-toggle">{isOpen?<ChevronDown/>:<ChevronRight/>}</div></button>{isOpen && <div className="topic-body"><div><span className="section-label">CONCEPT CHECKLIST</span><ul className="concept-list">{topic.concepts.map(c=><li key={c}><Check size={14}/>{c}</li>)}</ul><button className="primary-button compact" onClick={()=>onPractice(topic.subject)}><Play size={15}/> Practise this unit</button></div><div><span className="section-label">TRUSTED SOURCES</span><div className="source-list">{topic.sources.map(source=><a href={source.url} target="_blank" key={source.label}><div><strong>{source.label}</strong><small>{source.note}</small></div><ExternalLink size={15}/></a>)}</div></div></div>}</article>})}</div><div className="source-policy"><CircleHelp size={20}/><div><strong>How sources are handled</strong><p>R.S. Aggarwal and commercial books are linked for purchase or reference. Their questions and solutions are not copied. In-app practice is original unless an item is explicitly attributed to a public official paper.</p></div></div></>
 }
 
-function Practice({ saved, setStore, onQuiz }: { saved: string[]; setStore: React.Dispatch<React.SetStateAction<Store>>; onQuiz:(q:Quiz)=>void }) {
-  const [subject,setSubject] = useState<'All'|Subject>('All'), [search,setSearch] = useState(''); const subjects: ('All'|Subject)[] = ['All','Arithmetic','Reasoning','General Studies','AP Focus','English']; const filtered = questions.filter(q=>(subject==='All'||q.subject===subject)&&(`${q.question} ${q.topic}`.toLowerCase().includes(search.toLowerCase()))); const toggleSave=(id:string)=>setStore(s=>({...s,saved:s.saved.includes(id)?s.saved.filter(x=>x!==id):[...s.saved,id]}))
-  return <><PageHead eyebrow="Practice room" title="Train one weakness at a time." copy={`${questions.length} original starter questions with hints, solutions and solve-time targets.`} action={<button className="primary-button" onClick={()=>onQuiz(makeQuiz(subject==='All'?undefined:subject,10))}><Zap size={17}/> Quick set</button>}/><div className="filter-bar"><div className="search-box"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search a topic or question"/></div><div className="filter-tabs">{subjects.map(s=><button key={s} className={subject===s?'active':''} onClick={()=>setSubject(s)}>{s}</button>)}</div></div><div className="question-list">{filtered.map((item,index)=><PracticeCard key={item.id} item={item} number={index+1} saved={saved.includes(item.id)} onSave={()=>toggleSave(item.id)}/>)}</div></>
+function Practice({
+  saved,
+  setStore,
+  onQuiz,
+}: {
+  saved: string[];
+  setStore: React.Dispatch<React.SetStateAction<Store>>;
+  onQuiz: (q: Quiz) => void;
+}) {
+  const [subject, setSubject] = useState<"All" | Subject>("All"),
+    [search, setSearch] = useState(""),
+    [mode, setMode] = useState<"standard" | "hard">("standard"),
+    [activeHardTopic, setActiveHardTopic] = useState("");
+  const subjects: ("All" | Subject)[] = [
+    "All",
+    "Arithmetic",
+    "Reasoning",
+    "General Studies",
+    "AP Focus",
+    "English",
+  ];
+  const subjectPool = questions.filter(
+    (item) => subject === "All" || item.subject === subject,
+  );
+  const filtered = subjectPool.filter((item) =>
+    `${item.question} ${item.topic}`
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
+  const hardPool = filtered.filter((item) => item.difficulty === "Hard");
+  const hardGroups = Array.from(
+    hardPool
+      .reduce((groups, item) => {
+        const key = `${item.subject}|${item.topic}`;
+        const current = groups.get(key) ?? [];
+        current.push(item);
+        groups.set(key, current);
+        return groups;
+      }, new Map<string, Question[]>())
+      .entries(),
+  );
+  const selectedGroup =
+    hardGroups.find(([key]) => key === activeHardTopic) ?? hardGroups[0];
+  const toggleSave = (id: string) =>
+    setStore((state) => ({
+      ...state,
+      saved: state.saved.includes(id)
+        ? state.saved.filter((item) => item !== id)
+        : [...state.saved, id],
+    }));
+  const startHardDrill = () => {
+    const pool = selectedGroup?.[1] ?? hardPool;
+    if (pool.length)
+      onQuiz(
+        makeHardQuiz(
+          pool,
+          selectedGroup
+            ? `${selectedGroup[1][0].topic} hard challenge`
+            : "Mixed hard challenge",
+        ),
+      );
+  };
+  return (
+    <>
+      <PageHead
+        eyebrow={mode === "hard" ? "High-difficulty practice" : "Practice room"}
+        title={
+          mode === "hard"
+            ? "Work at the edge of your ability."
+            : "Train one weakness at a time."
+        }
+        copy={
+          mode === "hard"
+            ? `${hardPool.length} hard questions in the current filter, each with a strict solve-time target and a worked solution.`
+            : `${questions.length} original questions with hints, solutions and solve-time targets.`
+        }
+        action={
+          <button
+            className="primary-button"
+            onClick={
+              mode === "hard"
+                ? startHardDrill
+                : () =>
+                    onQuiz(
+                      makeQuiz(subject === "All" ? undefined : subject, 10),
+                    )
+            }
+          >
+            <Zap size={17} />
+            {mode === "hard" ? "Start hard drill" : "Quick set"}
+          </button>
+        }
+      />
+      <div className="practice-mode-tabs">
+        <button
+          className={mode === "standard" ? "active" : ""}
+          onClick={() => setMode("standard")}
+        >
+          <Brain size={16} /> Standard practice
+        </button>
+        <button
+          className={mode === "hard" ? "active" : ""}
+          onClick={() => setMode("hard")}
+        >
+          <Flame size={16} /> Hard challenges
+        </button>
+      </div>
+      <div className="filter-bar">
+        <div className="search-box">
+          <Search size={17} />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search a topic or question"
+          />
+        </div>
+        <div className="filter-tabs">
+          {subjects.map((item) => (
+            <button
+              key={item}
+              className={subject === item ? "active" : ""}
+              onClick={() => {
+                setSubject(item);
+                setActiveHardTopic("");
+              }}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+      {mode === "standard" ? (
+        <div className="question-list">
+          {filtered.map((item, index) => (
+            <PracticeCard
+              key={item.id}
+              item={item}
+              number={index + 1}
+              saved={saved.includes(item.id)}
+              onSave={() => toggleSave(item.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <>
+          <section className="hard-brief">
+            <div>
+              <span>
+                <Flame size={15} /> HARD MODE
+              </span>
+              <h2>Accuracy under pressure.</h2>
+              <p>
+                Questions are modelled on multi-step competitive-exam patterns.
+                The timer uses the sum of each question's editorial solve-time
+                target.
+              </p>
+            </div>
+            <div>
+              <strong>60%</strong>
+              <span>hard target in mocks</span>
+            </div>
+          </section>
+          {hardGroups.length ? (
+            <>
+              <div className="hard-topic-grid">
+                {hardGroups.map(([key, items]) => {
+                  const seconds = items.reduce(
+                    (sum, item) => sum + item.seconds,
+                    0,
+                  );
+                  return (
+                    <button
+                      key={key}
+                      className={selectedGroup?.[0] === key ? "active" : ""}
+                      onClick={() => setActiveHardTopic(key)}
+                    >
+                      <span>{items[0].subject}</span>
+                      <strong>{items[0].topic}</strong>
+                      <small>
+                        {items.length} questions · {Math.ceil(seconds / 60)} min
+                        target
+                      </small>
+                      <i>
+                        <ArrowRight size={14} />
+                      </i>
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedGroup && (
+                <section className="hard-topic-section">
+                  <div className="hard-topic-head">
+                    <div>
+                      <span className="eyebrow">Focused hard set</span>
+                      <h2>{selectedGroup[1][0].topic}</h2>
+                      <p>
+                        {selectedGroup[1].length} questions ·{" "}
+                        {Math.ceil(
+                          selectedGroup[1].reduce(
+                            (sum, item) => sum + item.seconds,
+                            0,
+                          ) / 60,
+                        )}{" "}
+                        minute combined target
+                      </p>
+                    </div>
+                    <button
+                      className="secondary-button"
+                      onClick={startHardDrill}
+                    >
+                      <Play size={16} /> Timed challenge
+                    </button>
+                  </div>
+                  <div className="question-list">
+                    {selectedGroup[1].map((item, index) => (
+                      <PracticeCard
+                        key={item.id}
+                        item={item}
+                        number={index + 1}
+                        saved={saved.includes(item.id)}
+                        onSave={() => toggleSave(item.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          ) : (
+            <div className="empty-state compact-empty">
+              <div>
+                <Flame size={30} />
+              </div>
+              <h2>No hard questions match this filter.</h2>
+              <p>Clear the search or choose another subject.</p>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
 }
 function PracticeCard({item,number,saved,onSave}:{item:Question;number:number;saved:boolean;onSave:()=>void}) {
   const [open,setOpen]=useState(false), [choice,setChoice]=useState<number|null>(null)
@@ -84,8 +321,8 @@ function PracticeCard({item,number,saved,onSave}:{item:Question;number:number;sa
 }
 
 function Mocks({ attempts, onQuiz }: { attempts: Attempt[]; onQuiz:(q:Quiz)=>void }) {
-  const [filter,setFilter]=useState<'All'|'Full paper'|'Sectional'>('All'), list=mockSeries.filter(m=>filter==='All'||m.type===filter)
-  return <><PageHead eyebrow="50-test campaign" title="Pressure-test your preparation." copy="Five Paper I mocks, five Paper II mocks and forty sectional missions. Every attempt uses unique questions, the official three-hour paper limit and a deterministic order."/><div className="mock-summary"><div><strong>50</strong><span>test blueprints</span></div><div><strong>10</strong><span>100-question full papers</span></div><div><strong>{attempts.length}</strong><span>attempts completed</span></div><p><Check size={16}/> {questions.length} reviewed original items. No question repeats inside a single mock; each numbered test remains reproducible when retried.</p></div><div className="tabs"><button className={filter==='All'?'active':''} onClick={()=>setFilter('All')}>All tests</button><button className={filter==='Full paper'?'active':''} onClick={()=>setFilter('Full paper')}>Full paper</button><button className={filter==='Sectional'?'active':''} onClick={()=>setFilter('Sectional')}>Sectional</button></div><div className="mock-grid">{list.map(mock=>{const done=attempts.find(a=>a.id.startsWith(mock.id)), subjectPool=getMockPool(mock.subject), available=Math.min(mock.questions,subjectPool.length); return <article className="mock-card" key={mock.id}><div className="mock-top"><span>MISSION {String(mock.number).padStart(2,'0')}</span><em>{mock.type}</em></div><h3>{mock.title}</h3><p>{mock.subject} · {available} unique questions</p><div className="mock-stats"><span><Clock3 size={14}/>{mock.minutes} min limit</span><span><FileText size={14}/>{mock.questions} questions</span></div>{done?<button className="completed-button" onClick={()=>onQuiz(makeMock(mock.number,mock.id,mock.title,mock.minutes,available,mock.subject))}><Check size={16}/> Scored {done.score}/{done.total} · Retry</button>:<button className="mock-start" onClick={()=>onQuiz(makeMock(mock.number,mock.id,mock.title,mock.minutes,available,mock.subject))}><Play size={16}/>Start test<ArrowRight size={15}/></button>}</article>})}</div></>
+  const [filter,setFilter]=useState<'All'|'Full paper'|'Sectional'>('All'), list=mockSeries.filter(mock=>filter==='All'||mock.type===filter)
+  return <><PageHead eyebrow="50-test campaign" title="Pressure-test your preparation." copy="Ten full simulations and forty sectional missions now use a hard-heavy editorial mix, unique questions per attempt and the official full-paper time limit."/><div className="mock-summary"><div><strong>50</strong><span>test blueprints</span></div><div><strong>60%</strong><span>target hard share</span></div><div><strong>{attempts.length}</strong><span>attempts completed</span></div><p><Check size={16}/> {questions.length} reviewed original items. Each test selects hard questions first, then balances medium and foundation checks without repeats inside that attempt.</p></div><div className="tabs"><button className={filter==='All'?'active':''} onClick={()=>setFilter('All')}>All tests</button><button className={filter==='Full paper'?'active':''} onClick={()=>setFilter('Full paper')}>Full paper</button><button className={filter==='Sectional'?'active':''} onClick={()=>setFilter('Sectional')}>Sectional</button></div><div className="mock-grid">{list.map(mock=>{const done=attempts.find(attempt=>attempt.id.startsWith(mock.id)),subjectPool=getMockPool(mock.subject),available=Math.min(mock.questions,subjectPool.length),preview=hardWeightedSelection(subjectPool,available,mock.number*937),hardCount=preview.filter(item=>item.difficulty==='Hard').length;return <article className="mock-card" key={mock.id}><div className="mock-top"><span>MISSION {String(mock.number).padStart(2,'0')}</span><em>{mock.type}</em></div><h3>{mock.title}</h3><p>{mock.subject} · {available} unique questions</p><div className="mock-stats"><span><Clock3 size={14}/>{mock.minutes} min limit</span><span><Flame size={14}/>{hardCount} hard</span><span><FileText size={14}/>{available} questions</span></div>{done?<button className="completed-button" onClick={()=>onQuiz(makeMock(mock.number,mock.id,mock.title,mock.minutes,available,mock.subject))}><Check size={16}/> Scored {done.score}/{done.total} · Retry</button>:<button className="mock-start" onClick={()=>onQuiz(makeMock(mock.number,mock.id,mock.title,mock.minutes,available,mock.subject))}><Play size={16}/>Start test<ArrowRight size={15}/></button>}</article>})}</div></>
 }
 
 function Analysis({store,onNavigate}:{store:Store;onNavigate:(v:View)=>void}) {
@@ -108,12 +345,89 @@ function QuizRunner({quiz,onClose,onSubmit}:{quiz:Quiz;onClose:()=>void;onSubmit
   useEffect(()=>{const timer=window.setInterval(()=>{const left=Math.max(0,Math.floor((expiry-Date.now())/1000));setRemaining(left);if(!left)window.clearInterval(timer)},1000);return()=>clearInterval(timer)},[expiry])
   useEffect(()=>{localStorage.setItem(ACTIVE_QUIZ_KEY,JSON.stringify({...quiz,index,answers,marked,startedAt:startTime,expiresAt:expiry}))},[answers,expiry,index,marked,quiz,startTime])
   useEffect(()=>{if(remaining===0)submit()},[remaining,submit])
-  return <div className="quiz-layer"><header><div><span className="brand-mark"><ShieldCheck size={20}/></span><div><small>ACTIVE TEST</small><strong>{quiz.title}</strong></div></div><div className={`quiz-timer ${remaining<300?'urgent':''}`}><Clock3 size={18}/><strong>{String(Math.floor(remaining/60)).padStart(2,'0')}:{String(remaining%60).padStart(2,'0')}</strong></div><button className="secondary-button compact" onClick={onClose}><X size={16}/> Exit</button></header><div className="quiz-layout"><aside><span className="section-label">QUESTION MAP</span><div className="palette">{quiz.items.map((q,i)=><button key={`${q.id}-${i}`} onClick={()=>{setIndex(i);setShowHint(false)}} className={`${i===index?'active':''} ${answers[q.id]!==undefined?'answered':''} ${marked.includes(q.id)?'marked':''}`}>{i+1}</button>)}</div><div className="legend"><span><i className="answered"/>Answered</span><span><i className="marked"/>Review</span></div><button className="submit-button" onClick={submit}>Submit test <ArrowRight size={16}/></button></aside><main className="quiz-main"><div className="quiz-meta"><span>{item.subject} / {item.topic}</span><span>{item.difficulty} · target {item.seconds}s</span></div><div className="quiz-question"><span>Question {index+1} of {quiz.items.length}</span><h2>{item.question}</h2><div className="quiz-options">{item.options.map((option,i)=><button key={option} className={answers[item.id]===i?'selected':''} onClick={()=>setAnswers(a=>({...a,[item.id]:i}))}><span>{String.fromCharCode(65+i)}</span>{option}</button>)}</div>{showHint&&<div className="hint"><Sparkles size={16}/><strong>Hint:</strong> {item.hint}</div>}</div><div className="quiz-nav"><div><button onClick={()=>setShowHint(!showHint)}><CircleHelp size={16}/> Hint</button><button className={marked.includes(item.id)?'marked':''} onClick={()=>setMarked(m=>m.includes(item.id)?m.filter(x=>x!==item.id):[...m,item.id])}><FileText size={16}/> Mark for review</button></div><div><button disabled={index===0} onClick={()=>{setIndex(i=>i-1);setShowHint(false)}}>Previous</button>{index===quiz.items.length-1?<button className="primary-button compact" onClick={submit}>Finish</button>:<button className="primary-button compact" onClick={()=>{setIndex(i=>i+1);setShowHint(false)}}>Next <ArrowRight size={15}/></button>}</div></div></main></div></div>
+  return <div className="quiz-layer"><header><div><span className="brand-mark"><ShieldCheck size={20}/></span><div><small>ACTIVE TEST</small><strong>{quiz.title}</strong></div></div><div className={`quiz-timer ${remaining<300?'urgent':''}`}><Clock3 size={18}/><strong>{String(Math.floor(remaining/60)).padStart(2,'0')}:{String(remaining%60).padStart(2,'0')}</strong></div><button className="secondary-button compact" onClick={onClose} aria-label="Exit test"><X size={16}/><span>Exit</span></button></header><div className="quiz-layout"><aside><span className="section-label">QUESTION MAP</span><div className="palette">{quiz.items.map((q,i)=><button key={`${q.id}-${i}`} onClick={()=>{setIndex(i);setShowHint(false)}} className={`${i===index?'active':''} ${answers[q.id]!==undefined?'answered':''} ${marked.includes(q.id)?'marked':''}`}>{i+1}</button>)}</div><div className="legend"><span><i className="answered"/>Answered</span><span><i className="marked"/>Review</span></div><button className="submit-button" onClick={submit}>Submit test <ArrowRight size={16}/></button></aside><main className="quiz-main"><div className="quiz-meta"><span>{item.subject} / {item.topic}</span><span>{item.difficulty} · target {item.seconds}s</span></div><div className="quiz-question"><span>Question {index+1} of {quiz.items.length}</span><h2>{item.question}</h2><div className="quiz-options">{item.options.map((option,i)=><button key={option} className={answers[item.id]===i?'selected':''} onClick={()=>setAnswers(a=>({...a,[item.id]:i}))}><span>{String.fromCharCode(65+i)}</span>{option}</button>)}</div>{showHint&&<div className="hint"><Sparkles size={16}/><strong>Hint:</strong> {item.hint}</div>}</div><div className="quiz-nav"><div><button onClick={()=>setShowHint(!showHint)}><CircleHelp size={16}/> Hint</button><button className={marked.includes(item.id)?'marked':''} onClick={()=>setMarked(m=>m.includes(item.id)?m.filter(x=>x!==item.id):[...m,item.id])}><FileText size={16}/> Mark for review</button><button className="mobile-quiz-submit" onClick={submit}><Check size={16}/> Submit</button></div><div><button disabled={index===0} onClick={()=>{setIndex(i=>i-1);setShowHint(false)}}>Previous</button>{index===quiz.items.length-1?<button className="primary-button compact" onClick={submit}>Finish</button>:<button className="primary-button compact" onClick={()=>{setIndex(i=>i+1);setShowHint(false)}}>Next <ArrowRight size={15}/></button>}</div></div></main></div></div>
 }
 
-function makeQuiz(subject?:Subject,count=10):Quiz { const pool=subject?questions.filter(q=>q.subject===subject):questions;return{title:subject?`${subject} quick set`:'Daily mixed diagnostic',items:seeded(pool,Number(todayKey().replaceAll('-',''))).slice(0,Math.min(count,pool.length)),minutes:Math.max(10,Math.round(count*1.2))} }
-function getMockPool(subject:string){if(subject==='Paper I')return questions.filter(q=>q.subject==='Arithmetic'||q.subject==='Reasoning');if(subject==='Paper II')return questions.filter(q=>q.subject==='General Studies'||q.subject==='AP Focus');return questions.filter(q=>q.subject===subject)}
-function makeMock(seed:number,id:string,title:string,minutes:number,count:number,subject:string):Quiz { return{title:`${id} ${title}`,items:seeded(getMockPool(subject),seed*937).slice(0,count),minutes} }
+function makeQuiz(subject?: Subject, count = 10): Quiz {
+  const pool = subject
+    ? questions.filter((q) => q.subject === subject)
+    : questions;
+  return {
+    title: subject ? `${subject} quick set` : "Daily mixed diagnostic",
+    items: seeded(pool, Number(todayKey().replaceAll("-", ""))).slice(
+      0,
+      Math.min(count, pool.length),
+    ),
+    minutes: Math.max(10, Math.round(count * 1.2)),
+  };
+}
+function makeHardQuiz(pool: Question[], title: string, count = 10): Quiz {
+  const items = seeded(
+    pool,
+    Number(todayKey().replaceAll("-", "")) + pool.length,
+  ).slice(0, Math.min(count, pool.length));
+  return {
+    title,
+    items,
+    minutes: Math.max(
+      1,
+      Math.ceil(items.reduce((sum, item) => sum + item.seconds, 0) / 60),
+    ),
+  };
+}
+function getMockPool(subject: string) {
+  if (subject === "Paper I")
+    return questions.filter(
+      (q) => q.subject === "Arithmetic" || q.subject === "Reasoning",
+    );
+  if (subject === "Paper II")
+    return questions.filter(
+      (q) => q.subject === "General Studies" || q.subject === "AP Focus",
+    );
+  return questions.filter((q) => q.subject === subject);
+}
+function hardWeightedSelection(pool: Question[], count: number, seed: number) {
+  const hard = seeded(
+      pool.filter((item) => item.difficulty === "Hard"),
+      seed + 11,
+    ),
+    medium = seeded(
+      pool.filter((item) => item.difficulty === "Medium"),
+      seed + 23,
+    ),
+    easy = seeded(
+      pool.filter((item) => item.difficulty === "Easy"),
+      seed + 37,
+    );
+  const selected = [
+    ...hard.slice(0, Math.ceil(count * 0.6)),
+    ...medium.slice(0, Math.ceil(count * 0.3)),
+    ...easy.slice(0, Math.ceil(count * 0.1)),
+  ];
+  const used = new Set(selected.map((item) => item.id)),
+    remaining = seeded(
+      pool.filter((item) => !used.has(item.id)),
+      seed + 51,
+    );
+  return seeded(
+    [...selected, ...remaining].slice(0, Math.min(count, pool.length)),
+    seed + 73,
+  );
+}
+function makeMock(
+  seed: number,
+  id: string,
+  title: string,
+  minutes: number,
+  count: number,
+  subject: string,
+): Quiz {
+  return {
+    title: `${id} ${title}`,
+    items: hardWeightedSelection(getMockPool(subject), count, seed * 937),
+    minutes,
+  };
+}
 function calculateStreak(daily:Daily[]){const dates=new Set(daily.filter(d=>d.questions>0).map(d=>d.date));let count=0;const d=new Date();if(!dates.has(d.toLocaleDateString('en-CA')))d.setDate(d.getDate()-1);while(dates.has(d.toLocaleDateString('en-CA'))){count++;d.setDate(d.getDate()-1)}return count}
 function activityDays(daily:Daily[]){const map=new Map(daily.map(d=>[d.date,d.questions]));return Array.from({length:84},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(83-i));const date=d.toLocaleDateString('en-CA'),count=map.get(date)||0;return{label:date,count,level:count===0?0:count<10?1:count<25?2:count<50?3:4}})}
 export default App

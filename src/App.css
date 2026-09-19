@@ -11,3 +11,53 @@
 
 @media(max-width:1050px){.paper-reader-layout{grid-template-columns:1fr}.answer-sheet{position:static;order:-1}.paper-frame-wrap iframe{height:75vh;min-height:600px}}
 @media(max-width:760px){.paper-reader-head{align-items:flex-start}.reader-score{width:78px;height:78px}.reader-score strong{font-size:22px}.paper-reader-notice{align-items:flex-start;flex-wrap:wrap}.paper-reader-notice p{flex-basis:calc(100% - 30px)}.paper-reader-layout{display:flex;flex-direction:column}.answer-sheet{order:0;width:100%;box-sizing:border-box}.paper-frame-wrap{width:100%}.paper-frame-wrap iframe{height:62vh;min-height:480px}.answer-palette{grid-template-columns:repeat(10,1fr)}}
+
+/* Phone safe areas and sticky-stack spacing */
+.sidebar{padding-top:calc(28px + var(--safe-top));padding-bottom:calc(22px + var(--safe-bottom))}
+.topbar{height:calc(72px + var(--safe-top));padding-top:var(--safe-top);padding-left:calc(42px + var(--safe-left));padding-right:calc(42px + var(--safe-right))}
+.filter-bar{top:calc(84px + var(--safe-top))}
+.pyq-controls{top:calc(82px + var(--safe-top))}
+.answer-sheet{top:calc(85px + var(--safe-top))}
+.profile-panel{padding-top:calc(32px + var(--safe-top));padding-right:calc(32px + var(--safe-right));padding-bottom:calc(32px + var(--safe-bottom))}
+.quiz-layer>header{height:calc(72px + var(--safe-top));padding-top:var(--safe-top)}
+.quiz-layout{min-height:calc(100vh - 72px - var(--safe-top))}
+
+@media(max-width:760px){
+  .topbar{height:calc(62px + var(--safe-top));padding:var(--safe-top) calc(16px + var(--safe-right)) 0 calc(16px + var(--safe-left))}
+  .content{padding:32px calc(16px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(16px + var(--safe-left))}
+  .page-head{padding-top:2px}
+  .filter-bar,.pyq-controls{top:calc(70px + var(--safe-top))}
+  .quiz-layer>header{padding:var(--safe-top) calc(12px + var(--safe-right)) 0 calc(12px + var(--safe-left))}
+  .quiz-main{padding-right:calc(17px + var(--safe-right));padding-bottom:calc(25px + var(--safe-bottom));padding-left:calc(17px + var(--safe-left))}
+  .profile-panel{padding:calc(25px + var(--safe-top)) calc(20px + var(--safe-right)) calc(25px + var(--safe-bottom)) calc(20px + var(--safe-left))}
+  .paper-reader-shell{margin-top:0}
+  .quiz-layout,.quiz-layout>*{width:100%;min-width:0;max-width:100%}
+  .palette{width:100%;max-width:100%;overflow-x:auto}
+  .quiz-layer>header{grid-template-columns:minmax(0,1fr) auto auto}
+  .quiz-layer>header>div:first-child,.quiz-layer>header>div:first-child>div{min-width:0}
+  .quiz-layer>header>div:first-child strong{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .quiz-layer>header>.secondary-button{display:grid;width:38px;min-width:38px;height:38px;padding:0;border-radius:50%}
+  .quiz-layer>header>.secondary-button span{display:none}
+  .mobile-quiz-submit{display:flex!important;color:#a4483d!important;border-color:#c98279!important}
+  .answer-palette{grid-template-columns:repeat(5,1fr);max-height:280px;overflow-y:auto}
+  .answer-palette button{min-height:44px;aspect-ratio:auto}
+}
+
+.practice-mode-tabs{display:flex;gap:7px;margin:-12px 0 18px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.practice-mode-tabs button{border:1px solid var(--line);background:var(--paper);color:#68736e;min-height:40px;padding:0 14px;border-radius:7px;display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800}
+.practice-mode-tabs button.active{background:var(--navy);border-color:var(--navy);color:white}
+.practice-mode-tabs button.active:last-child{background:#9f4035;border-color:#9f4035}
+.hard-brief{position:relative;overflow:hidden;display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center;background:#762f29;color:white;border-radius:12px;padding:28px 31px;margin-bottom:14px}
+.hard-brief:after{content:'';position:absolute;width:230px;height:230px;border:1px solid #ffffff1f;border-radius:50%;right:-70px;top:-120px;box-shadow:0 0 0 45px #ffffff06}
+.hard-brief>div{position:relative;z-index:1}.hard-brief>div:first-child>span{display:flex;align-items:center;gap:6px;color:#ffcf8d;font:500 9px/1 'DM Mono';letter-spacing:1.2px}.hard-brief h2{font:700 30px/1 'Newsreader';margin:10px 0 7px}.hard-brief p{color:#e4c7c4;font-size:10px;line-height:1.6;margin:0;max-width:650px}.hard-brief>div:last-child{text-align:right}.hard-brief>div:last-child strong,.hard-brief>div:last-child span{display:block}.hard-brief>div:last-child strong{color:#ffcf8d;font:700 40px/1 'Newsreader'}.hard-brief>div:last-child span{font-size:8px;margin-top:5px;color:#e4c7c4}
+.hard-topic-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 22px}.hard-topic-grid button{position:relative;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:16px 38px 16px 16px;text-align:left;color:var(--ink);min-width:0}.hard-topic-grid button>span,.hard-topic-grid button>strong,.hard-topic-grid button>small{display:block}.hard-topic-grid button>span{font:500 8px/1 'DM Mono';letter-spacing:.7px;color:var(--red);text-transform:uppercase}.hard-topic-grid button>strong{font:700 17px/1.15 'Newsreader';margin:7px 0 5px}.hard-topic-grid button>small{font-size:8px;color:var(--muted)}.hard-topic-grid button>i{position:absolute;right:13px;top:50%;transform:translateY(-50%);font-style:normal;color:#87918c}.hard-topic-grid button.active{border-color:#9f4035;background:#f5e7e3;box-shadow:inset 3px 0 #9f4035}.hard-topic-grid button.active>i{color:#9f4035}
+.hard-topic-section{margin-top:8px}.hard-topic-head{display:flex;align-items:flex-end;justify-content:space-between;gap:25px;margin-bottom:14px;padding:24px 0 15px;border-bottom:1px solid var(--line)}.hard-topic-head h2{font:700 31px/1 'Newsreader';margin:9px 0 5px}.hard-topic-head p{font-size:9px;color:var(--muted);margin:0}
+.mobile-quiz-submit{display:none!important}
+
+@media(max-width:1050px){.hard-topic-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){
+  .practice-mode-tabs{margin-top:0;overflow:auto}.practice-mode-tabs button{white-space:nowrap}
+  .hard-brief{grid-template-columns:1fr;padding:23px 20px}.hard-brief>div:last-child{text-align:left}.hard-brief>div:last-child strong{font-size:31px}
+  .hard-topic-grid{grid-template-columns:1fr;max-height:310px;overflow:auto;padding-right:2px}
+  .hard-topic-head{align-items:flex-start;flex-direction:column}.hard-topic-head .secondary-button{width:100%}
+}
