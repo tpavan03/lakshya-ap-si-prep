@@ -15,13 +15,13 @@ A focused, local-first preparation workspace for the Andhra Pradesh Police Sub I
 ## What is inside
 
 - Official 2026 exam profile with direct SLPRB notification access
-- Concept maps and trusted source links for every major syllabus area
-- 411 original practice questions with hints, worked explanations, difficulty, and target time
-- 113 hard questions organised into topic challenges with strict combined timers
+- Seven complete theory chapters with concepts, formulae or rules, worked examples, traps, revision notes and trusted sources
+- 4,631 original practice questions with hints, worked explanations, difficulty, and target time
+- 2,805 hard questions organised into topic challenges with strict combined timers
 - Paper-level AP archive with direct paper/key links, stage filters, provenance labels, and review status
 - Persistent split-screen attempt mode for the verified 2018 Prelims Paper I Booklet C scan and its 100-entry official key
 - Official Kerala and Rajasthan SI papers with answer keys for topic-wise training
-- 411 unique original questions across all five subject groups
+- Filters for subject, topic, difficulty and text search, with progressive loading for fast mobile use
 - 50 deterministic, hard-heavy mock-test blueprints: 40 sectionals and 10 full 100-question simulations
 - Full-screen timer, question palette, answer state, hints, and review flags
 - Daily activity, streak, accuracy, subject diagnosis, and category-aware readiness
@@ -29,7 +29,9 @@ A focused, local-first preparation workspace for the Andhra Pradesh Police Sub I
 
 ## Current content status
 
-The current release contains 411 reviewed, original questions, including 113 hard items across Arithmetic, Reasoning, General Studies, AP Focus and English. Hard Practice groups them by topic and derives each challenge timer from the editorial solve-time targets. Every mock selects hard questions first, fills the remaining blueprint with medium and foundation checks, and avoids repetition inside that attempt. Each numbered mock remains reproducible on retry; questions may reappear across different numbered mocks so performance can be compared against a stable editorial bank.
+The current release contains 4,631 unique, original questions, including 2,805 hard items across Arithmetic, Reasoning, General Studies, AP Focus and English. This is more than eleven times the former 411-question library. Hard Practice groups them by topic and derives each challenge timer from the editorial solve-time targets. Every mock selects hard questions first, fills the remaining blueprint with medium and foundation checks, and avoids repetition inside that attempt. Each numbered mock remains reproducible on retry; questions may reappear across different numbered mocks so performance can be compared against a stable editorial bank.
+
+The Learn section contains a complete chapter for every syllabus group: 82 concept notes, 33 formula or rule cards, 18 worked examples, 42 common traps, 42 rapid-revision points and 27 source links. Each chapter leads directly into its matching filtered practice bank.
 
 The PYQ catalogue currently indexes 16 AP archive records: 13 retrievable question-paper records and three older key-only records covering the surviving 2008(2), 2011, 2016, 2018 and 2023 material. The 2016, 2018 and 2023 prelims and final-written objective papers represent 1,800 questions; the 2011 community scan raises visible paper coverage to about 2,000 questions. Eight government-hosted Kerala and Rajasthan papers provide additional practice. The first interactive companion covers the full 2018 Prelims Paper I Booklet C: the 100-option key was transcribed from the APSLPRB key and cross-checked 100/100 against a separate solved copy. Its answer state and last question are stored with the rest of the user profile.
 
