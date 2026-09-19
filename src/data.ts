@@ -3,6 +3,7 @@ import { expandedApQuestions } from './questions/apExpandedBank'
 import { expandedGeneralStudiesQuestions } from './questions/gsExpandedBank'
 import { generalStudiesQuestions } from './questions/generalStudies'
 import { hardQuantReasoningQuestions } from './questions/hardQuantReasoning'
+import { generatedQuantReasoningQuestions } from './questions/generatedQuantReasoning'
 import { quantQuestions } from './questions/quant'
 
 export type Subject = 'Arithmetic' | 'Reasoning' | 'General Studies' | 'AP Focus' | 'English'
@@ -66,18 +67,26 @@ const starterQuestions: Question[] = [
 
 const normalizeStem = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 const questionKey = (item: Question) => `${normalizeStem(item.question)}|${item.options.map(normalizeStem).join('|')}`
+const dedupeQuestions = (items: Question[]) => {
+  const seen = new Set<string>()
+  return items.filter(item => {
+    const key = questionKey(item)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
-export const questions: Question[] = [
+export const questions: Question[] = dedupeQuestions([
   ...starterQuestions,
   ...quantQuestions,
   ...hardQuantReasoningQuestions,
+  ...generatedQuantReasoningQuestions,
   ...generalStudiesQuestions,
   ...expandedGeneralStudiesQuestions,
   ...expandedApQuestions,
   ...apLanguageQuestions,
-].filter((item, index, all) =>
-  all.findIndex(candidate => questionKey(candidate) === questionKey(item)) === index,
-)
+])
 
 export type Topic = {
   id: string

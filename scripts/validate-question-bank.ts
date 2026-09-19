@@ -14,6 +14,7 @@ for (const item of questions) {
   stems.add(stem)
 
   if (item.options.length !== 4) problems.push(`${item.id}: expected exactly four options`)
+  if (item.id.startsWith('gq') && new Set(item.options.map(option => normalize(option))).size !== item.options.length) problems.push(`${item.id}: duplicate answer options`)
   if (!Number.isInteger(item.answer) || item.answer < 0 || item.answer >= item.options.length) problems.push(`${item.id}: invalid answer index`)
   if (!item.explanation.trim() || !item.hint.trim()) problems.push(`${item.id}: missing explanation or hint`)
   if (item.seconds < 15 || item.seconds > 240) problems.push(`${item.id}: unreasonable target time`)
