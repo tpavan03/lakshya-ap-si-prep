@@ -3,6 +3,7 @@ import { expandedApQuestions } from './questions/apExpandedBank'
 import { expandedGeneralStudiesQuestions } from './questions/gsExpandedBank'
 import { generalStudiesQuestions } from './questions/generalStudies'
 import { hardQuantReasoningQuestions } from './questions/hardQuantReasoning'
+import { expandedEnglishQuestions } from './questions/expandedEnglish'
 import { generatedQuantReasoningQuestions } from './questions/generatedQuantReasoning'
 import { quantQuestions } from './questions/quant'
 
@@ -86,6 +87,7 @@ export const questions: Question[] = dedupeQuestions([
   ...expandedGeneralStudiesQuestions,
   ...expandedApQuestions,
   ...apLanguageQuestions,
+  ...expandedEnglishQuestions,
 ])
 
 export type Topic = {
