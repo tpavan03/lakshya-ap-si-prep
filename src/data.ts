@@ -1,5 +1,6 @@
 import { apLanguageQuestions } from './questions/apLanguage'
 import { generalStudiesQuestions } from './questions/generalStudies'
+import { hardQuantReasoningQuestions } from './questions/hardQuantReasoning'
 import { quantQuestions } from './questions/quant'
 
 export type Subject = 'Arithmetic' | 'Reasoning' | 'General Studies' | 'AP Focus' | 'English'
@@ -67,6 +68,7 @@ const questionKey = (item: Question) => `${normalizeStem(item.question)}|${item.
 export const questions: Question[] = [
   ...starterQuestions,
   ...quantQuestions,
+  ...hardQuantReasoningQuestions,
   ...generalStudiesQuestions,
   ...apLanguageQuestions,
 ].filter((item, index, all) =>
