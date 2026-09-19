@@ -25,7 +25,7 @@
 .auth-loading i:after { content: ''; position: absolute; inset: 0; background: var(--lime); transform: translateX(-100%); animation: auth-load 1.2s ease-in-out infinite; }
 
 .auth-page { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(430px, .85fr); background: var(--cream); }
-.auth-story { min-height: 100vh; position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 44px clamp(38px, 6vw, 88px) 38px; color: #eef5ef; background: var(--navy); }
+.auth-story { min-height: 100vh; position: relative; overflow: hidden; display: flex; flex-direction: column; padding: calc(44px + var(--safe-top)) calc(clamp(38px, 6vw, 88px) + var(--safe-right)) calc(38px + var(--safe-bottom)) calc(clamp(38px, 6vw, 88px) + var(--safe-left)); color: #eef5ef; background: var(--navy); }
 .auth-story:before { content: ''; position: absolute; width: min(68vw, 850px); aspect-ratio: 1; right: -39%; top: -31%; border: 1px solid #d9ed8b26; border-radius: 50%; box-shadow: 0 0 0 72px #ffffff05, 0 0 0 144px #ffffff03, 0 0 0 216px #ffffff02; }
 .auth-story:after { content: '01'; position: absolute; right: clamp(25px, 5vw, 80px); bottom: 16%; color: #ffffff05; font: 700 clamp(170px, 24vw, 360px)/.7 'Newsreader', serif; }
 .auth-brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; }
@@ -72,13 +72,13 @@
 
 @media(max-width: 860px) {
   .auth-page { grid-template-columns: 1fr; }
-  .auth-story { min-height: auto; padding: 27px 24px 30px; }
+  .auth-story { min-height: auto; padding: calc(27px + var(--safe-top)) calc(24px + var(--safe-right)) 30px calc(24px + var(--safe-left)); }
   .auth-story-copy { padding: 52px 0 28px; }
   .auth-story h1 { font-size: clamp(42px, 12vw, 65px); }
   .auth-story-copy>p, .auth-story footer { display: none; }
   .auth-proof { margin-top: 31px; }
   .auth-story:after { display: none; }
-  .auth-entry { min-height: 570px; padding: 48px 24px 70px; justify-content: flex-start; }
+  .auth-entry { min-height: 570px; padding: 48px calc(24px + var(--safe-right)) calc(70px + var(--safe-bottom)) calc(24px + var(--safe-left)); justify-content: flex-start; }
   .auth-official { bottom: 22px; text-align: center; }
 }
 

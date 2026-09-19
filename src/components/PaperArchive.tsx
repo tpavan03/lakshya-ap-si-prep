@@ -21,6 +21,14 @@ export function PaperArchive({ progress, onProgress }: { progress: PaperProgress
   const [year, setYear] = useState<'All' | number>('All')
   const [query, setQuery] = useState('')
   const [activePaperId, setActivePaperId] = useState<string | null>(null)
+  const openPaper = (paperId: string) => {
+    setActivePaperId(paperId)
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }))
+  }
+  const closePaper = () => {
+    setActivePaperId(null)
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }))
+  }
 
   const scoped = previousPapers.filter(paper => scope === 'Andhra Pradesh' ? paper.state === 'Andhra Pradesh' : paper.state !== 'Andhra Pradesh')
   const years = [...new Set(scoped.map(paper => paper.year))].sort((a, b) => b - a)
@@ -37,7 +45,7 @@ export function PaperArchive({ progress, onProgress }: { progress: PaperProgress
 
   if (activePaperId === 'ap-2018-prelims-1') {
     const paper = previousPapers.find(item => item.id === activePaperId)!
-    return <PaperCompanion paper={paper} answers={ap2018PrelimsPaper1SetC} progress={progress[activePaperId] ?? { answers: {}, current: 0 }} onChange={value => onProgress(activePaperId, value)} onClose={() => setActivePaperId(null)}/>
+    return <PaperCompanion paper={paper} answers={ap2018PrelimsPaper1SetC} progress={progress[activePaperId] ?? { answers: {}, current: 0 }} onChange={value => onProgress(activePaperId, value)} onClose={closePaper}/>
   }
 
   return <>
@@ -94,7 +102,7 @@ export function PaperArchive({ progress, onProgress }: { progress: PaperProgress
         {paper.note && <p className="paper-note">{paper.note}</p>}
         <div className="paper-actions">
           {paper.paperUrl && <a className="primary-button compact" href={paper.paperUrl} target="_blank" rel="noreferrer"><FileText size={15}/> Open paper</a>}
-          {paper.interactive === 'Ready' && <button className="secondary-button compact" onClick={() => setActivePaperId(paper.id)}><BookOpenCheck size={15}/> Attempt paper</button>}
+          {paper.interactive === 'Ready' && <button className="secondary-button compact" onClick={() => openPaper(paper.id)}><BookOpenCheck size={15}/> Attempt paper</button>}
           {paper.answerKeyUrl && <a className="secondary-button compact" href={paper.answerKeyUrl} target="_blank" rel="noreferrer"><FileKey2 size={15}/> Answer key</a>}
           {paper.sourceUrl && <a className="paper-source-link" href={paper.sourceUrl} target="_blank" rel="noreferrer">Source <ExternalLink size={13}/></a>}
         </div>

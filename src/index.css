@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap');
-:root { font-family:'Manrope',sans-serif; color:#15231f; background:#f3f1ea; font-synthesis:none; text-rendering:optimizeLegibility; --ink:#15231f; --muted:#68736e; --paper:#fbfaf6; --cream:#f3f1ea; --line:#d9ddd6; --green:#174c3b; --green2:#236650; --lime:#d9ed8b; --red:#b94a3d; --navy:#142b38; }
+:root { font-family:'Manrope',sans-serif; color:#15231f; background:#f3f1ea; font-synthesis:none; text-rendering:optimizeLegibility; --ink:#15231f; --muted:#68736e; --paper:#fbfaf6; --cream:#f3f1ea; --line:#d9ddd6; --green:#174c3b; --green2:#236650; --lime:#d9ed8b; --red:#b94a3d; --navy:#142b38; --safe-top:env(safe-area-inset-top,0px); --safe-right:env(safe-area-inset-right,0px); --safe-bottom:env(safe-area-inset-bottom,0px); --safe-left:env(safe-area-inset-left,0px); }
 * { box-sizing:border-box; }
 html { background:#f3f1ea; }
 body { margin:0; min-width:320px; min-height:100vh; }
