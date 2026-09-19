@@ -10,6 +10,7 @@ const nativeRedirect = 'com.tpavan.lakshya://login-callback'
 
 export function useCloudSync<T>(value: T, setValue: Dispatch<SetStateAction<T>>) {
   const [user, setUser] = useState<User | null>(null)
+  const [authReady, setAuthReady] = useState(!cloudConfigured)
   const [syncState, setSyncState] = useState<SyncState>(cloudConfigured ? 'loading' : 'local')
   const hydratedUser = useRef<string | null>(null)
   const valueRef = useRef(value)
@@ -29,10 +30,14 @@ export function useCloudSync<T>(value: T, setValue: Dispatch<SetStateAction<T>>)
 
   useEffect(() => {
     if (!supabase) return
-    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null))
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null)
+      setAuthReady(true)
+    }).catch(() => setAuthReady(true))
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       hydratedUser.current = null
       setUser(session?.user ?? null)
+      setAuthReady(true)
       setSyncState(session?.user ? 'loading' : 'local')
     })
     return () => data.subscription.unsubscribe()
@@ -101,7 +106,13 @@ export function useCloudSync<T>(value: T, setValue: Dispatch<SetStateAction<T>>)
     return error?.message ?? null
   }
 
-  const signOut = async () => { if (supabase) await supabase.auth.signOut() }
+  const signOut = async () => {
+    if (!supabase) return
+    await supabase.auth.signOut({ scope: 'local' })
+    hydratedUser.current = null
+    setUser(null)
+    setSyncState('local')
+  }
 
-  return { cloudConfigured, user, syncState, signInWithEmail, signInWithGoogle, signOut, syncNow: () => upload(value) }
+  return { cloudConfigured, authReady, user, syncState, signInWithEmail, signInWithGoogle, signOut, syncNow: () => upload(value) }
 }
