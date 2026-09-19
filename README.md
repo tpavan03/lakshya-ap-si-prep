@@ -4,6 +4,8 @@
 
 <p align="center">
   <a href="https://lakshya-ap-si-prep.vercel.app"><strong>Open the live preparation desk →</strong></a>
+  ·
+  <a href="https://github.com/tpavan03/lakshya-ap-si-prep/releases/latest"><strong>Download the Android APK →</strong></a>
 </p>
 
 # Lakshya · AP SI Prep Desk
@@ -46,9 +48,21 @@ npm run lint
 npm run build
 ```
 
+## Android app
+
+Download the current APK from [GitHub Releases](https://github.com/tpavan03/lakshya-ap-si-prep/releases/latest). Android may ask you to allow installs from your browser or file manager the first time you sideload it.
+
+To rebuild the APK, install Android Studio or the Android SDK plus JDK 21, then run:
+
+```bash
+npm run android:apk
+```
+
+The generated file is `android/app/build/outputs/apk/debug/app-debug.apk`. Google login returns to the app through the `com.tpavan.lakshya://login-callback` deep link. Add that exact URL to **Supabase → Authentication → URL Configuration → Redirect URLs** for native sign-in.
+
 ## Storage and future sync
 
-Progress is stored in `localStorage` under `apsi-command:v1`. Use **Profile → Export JSON** for a portable backup. When Supabase environment variables are present, email magic-link or Google login automatically syncs the same state into an RLS-protected per-user row. Run [`supabase/migrations/001_user_state.sql`](supabase/migrations/001_user_state.sql) in the project SQL editor before enabling cloud sync.
+Progress is stored in `localStorage` under `apsi-command:v1`. Use **Profile → Export JSON** for a portable backup. When Supabase environment variables are present, email magic-link or Google login automatically syncs the same state into an RLS-protected per-user row. Each Google account receives its own isolated progress record, shared between the website and Android app. Run [`supabase/migrations/001_user_state.sql`](supabase/migrations/001_user_state.sql) in the project SQL editor before enabling cloud sync.
 
 ## Source policy
 
@@ -56,7 +70,7 @@ The current exam profile links to the [official APSLPRB 2026 notification](https
 
 ## Technology
 
-React 19 · TypeScript · Vite · Lucide · CSS · Vercel
+React 19 · TypeScript · Vite · Capacitor · Supabase · Lucide · CSS · Vercel
 
 ---
 
