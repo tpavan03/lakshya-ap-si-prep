@@ -14,13 +14,15 @@ for (const item of questions) {
   stems.add(stem)
 
   if (item.options.length !== 4) problems.push(`${item.id}: expected exactly four options`)
+  if (new Set(item.options.map(option => option.trim())).size !== item.options.length) problems.push(`${item.id}: duplicate answer options`)
   if (item.id.startsWith('gq') && new Set(item.options.map(option => normalize(option))).size !== item.options.length) problems.push(`${item.id}: duplicate answer options`)
   if (!Number.isInteger(item.answer) || item.answer < 0 || item.answer >= item.options.length) problems.push(`${item.id}: invalid answer index`)
   if (!item.explanation.trim() || !item.hint.trim()) problems.push(`${item.id}: missing explanation or hint`)
+  if (!item.source.trim()) problems.push(`${item.id}: missing source or provenance note`)
   if (item.seconds < 15 || item.seconds > 240) problems.push(`${item.id}: unreasonable target time`)
 }
 
-if (questions.length < 300) problems.push(`Expected at least 300 unique questions, received ${questions.length}`)
+if (questions.length < 4_110) problems.push(`Expected at least ten times the former 411-question bank, received ${questions.length}`)
 
 const distribution = Object.entries(
   questions.reduce<Record<string, number>>((counts, item) => {
@@ -35,9 +37,9 @@ const hardDistribution = questions.reduce<Record<string, number>>((counts, item)
 
 for (const subject of ['Arithmetic', 'Reasoning', 'General Studies', 'AP Focus', 'English']) {
   const count = distribution.find(([name]) => name === subject)?.[1] ?? 0
-  if (count < 25) problems.push(`${subject}: requires at least 25 unique questions for sectionals, received ${count}`)
+  if (count < 600) problems.push(`${subject}: requires at least 600 unique questions for sectionals, received ${count}`)
   const hardCount = hardDistribution[subject] ?? 0
-  if (hardCount < 15) problems.push(`${subject}: requires at least 15 hard questions, received ${hardCount}`)
+  if (hardCount < 350) problems.push(`${subject}: requires at least 350 hard questions, received ${hardCount}`)
 }
 
 if (new Set(questions.slice(0, 100).map(item => item.id)).size !== 100) {
