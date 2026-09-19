@@ -1,4 +1,6 @@
 import { apLanguageQuestions } from './questions/apLanguage'
+import { expandedApQuestions } from './questions/apExpandedBank'
+import { expandedGeneralStudiesQuestions } from './questions/gsExpandedBank'
 import { generalStudiesQuestions } from './questions/generalStudies'
 import { hardQuantReasoningQuestions } from './questions/hardQuantReasoning'
 import { quantQuestions } from './questions/quant'
@@ -70,6 +72,8 @@ export const questions: Question[] = [
   ...quantQuestions,
   ...hardQuantReasoningQuestions,
   ...generalStudiesQuestions,
+  ...expandedGeneralStudiesQuestions,
+  ...expandedApQuestions,
   ...apLanguageQuestions,
 ].filter((item, index, all) =>
   all.findIndex(candidate => questionKey(candidate) === questionKey(item)) === index,
