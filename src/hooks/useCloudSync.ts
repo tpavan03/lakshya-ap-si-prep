@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import type { User } from '@supabase/supabase-js'
+import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import { cloudConfigured, supabase } from '../lib/supabase'
 
 type SyncState = 'local' | 'loading' | 'synced' | 'saving' | 'error'
+const nativeRedirect = 'com.tpavan.lakshya://login-callback'
 
 export function useCloudSync<T>(value: T, setValue: Dispatch<SetStateAction<T>>) {
   const [user, setUser] = useState<User | null>(null)
@@ -35,6 +39,25 @@ export function useCloudSync<T>(value: T, setValue: Dispatch<SetStateAction<T>>)
   }, [])
 
   useEffect(() => {
+    if (!supabase || !Capacitor.isNativePlatform()) return
+    const client = supabase
+    const handleAuthUrl = async (url: string) => {
+      if (!url.startsWith(nativeRedirect)) return
+      const parsed = new URL(url)
+      const params = new URLSearchParams(parsed.hash.replace(/^#/, '') || parsed.search)
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+      const code = params.get('code')
+      if (accessToken && refreshToken) await client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+      else if (code) await client.auth.exchangeCodeForSession(code)
+      await Browser.close().catch(() => undefined)
+    }
+    void CapacitorApp.getLaunchUrl().then(result => { if (result?.url) void handleAuthUrl(result.url) })
+    const listener = CapacitorApp.addListener('appUrlOpen', ({ url }) => { void handleAuthUrl(url) })
+    return () => { void listener.then(handle => handle.remove()) }
+  }, [])
+
+  useEffect(() => {
     if (!supabase || !user || hydratedUser.current === user.id) return
     let cancelled = false
     setSyncState('loading')
@@ -62,17 +85,19 @@ export function useCloudSync<T>(value: T, setValue: Dispatch<SetStateAction<T>>)
     if (!supabase) return 'Supabase is not configured yet.'
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: Capacitor.isNativePlatform() ? nativeRedirect : window.location.origin },
     })
     return error?.message ?? null
   }
 
   const signInWithGoogle = async () => {
     if (!supabase) return 'Supabase is not configured yet.'
-    const { error } = await supabase.auth.signInWithOAuth({
+    const native = Capacitor.isNativePlatform()
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: native ? nativeRedirect : window.location.origin, skipBrowserRedirect: native },
     })
+    if (native && data.url) await Browser.open({ url: data.url })
     return error?.message ?? null
   }
 
