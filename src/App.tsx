@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, ArrowRight, BarChart3, BookOpen, Brain, CalendarDays, Check, ChevronDown, ChevronRight, CircleHelp, Clock3, Download, ExternalLink, FileCheck2, FileText, Flame, Gauge, History, LayoutDashboard, Menu, Play, Search, ShieldCheck, Sparkles, Target, TimerReset, TrendingUp, Upload, X, Zap } from 'lucide-react'
-import { archives, mockSeries, questions, topics, type Question, type Subject } from './data'
+import { mockSeries, questions, topics, type Question, type Subject } from './data'
 import { examProfile, readinessBenchmarks } from './exam'
 import { useCloudSync } from './hooks/useCloudSync'
+import { PaperArchive, type PaperAttemptProgress } from './components/PaperArchive'
 import './App.css'
 import './cloud.css'
 
@@ -10,13 +11,13 @@ type View = 'dashboard' | 'syllabus' | 'practice' | 'pyq' | 'mocks' | 'analysis'
 type Profile = { name: string; category: string; examDate: string; dailyMinutes: number }
 type Attempt = { id: string; title: string; date: string; score: number; total: number; seconds: number; subjects: Record<string, { correct: number; total: number }> }
 type Daily = { date: string; questions: number; correct: number; minutes: number }
-type Store = { profile: Profile; attempts: Attempt[]; daily: Daily[]; saved: string[]; version: number }
+type Store = { profile: Profile; attempts: Attempt[]; daily: Daily[]; saved: string[]; pyqProgress?: Record<string, PaperAttemptProgress>; version: number }
 type Quiz = { title: string; items: Question[]; minutes: number; startedAt?: number; expiresAt?: number; index?: number; answers?: Record<string,number>; marked?: string[] }
 
 const STORAGE_KEY = 'apsi-command:v1'
 const ACTIVE_QUIZ_KEY = 'apsi-command:active-quiz'
 const todayKey = () => new Date().toLocaleDateString('en-CA')
-const defaultStore: Store = { profile: { name: 'Aspirant', category: 'OC / EWS', examDate: '2027-02-15', dailyMinutes: 120 }, attempts: [], daily: [], saved: [], version: 1 }
+const defaultStore: Store = { profile: { name: 'Aspirant', category: 'OC / EWS', examDate: '2027-02-15', dailyMinutes: 120 }, attempts: [], daily: [], saved: [], pyqProgress: {}, version: 2 }
 const loadStore = (): Store => { try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? { ...defaultStore, ...JSON.parse(raw) } : defaultStore } catch { return defaultStore } }
 const nav: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Command centre', icon: LayoutDashboard }, { id: 'syllabus', label: 'Learn the syllabus', icon: BookOpen },
@@ -37,7 +38,7 @@ function App() {
   return <div className="app-shell">
     <Sidebar active={view} onNavigate={navigate} open={mobileOpen} onClose={() => setMobileOpen(false)} />
     <main className="main"><header className="topbar"><button className="icon-button mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu size={20}/></button><div className="official-strip"><span className="live-dot"/> 2026 cycle desk <span>•</span> Verified {new Date(examProfile.checkedOn).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</div><button className="profile-chip" onClick={() => setProfileOpen(true)}><span>{store.profile.name.slice(0,1).toUpperCase()}</span><div><strong>{store.profile.name}</strong><small>{store.profile.category}</small></div><ChevronDown size={15}/></button></header>
-      <div className="content">{view === 'dashboard' && <Dashboard store={store} onNavigate={navigate} onQuiz={beginQuiz}/>} {view === 'syllabus' && <Syllabus onPractice={subject => beginQuiz(makeQuiz(subject, 10))}/>} {view === 'practice' && <Practice saved={store.saved} setStore={setStore} onQuiz={beginQuiz}/>} {view === 'pyq' && <PaperArchive/>} {view === 'mocks' && <Mocks attempts={store.attempts} onQuiz={beginQuiz}/>} {view === 'analysis' && <Analysis store={store} onNavigate={navigate}/>}</div>
+      <div className="content">{view === 'dashboard' && <Dashboard store={store} onNavigate={navigate} onQuiz={beginQuiz}/>} {view === 'syllabus' && <Syllabus onPractice={subject => beginQuiz(makeQuiz(subject, 10))}/>} {view === 'practice' && <Practice saved={store.saved} setStore={setStore} onQuiz={beginQuiz}/>} {view === 'pyq' && <PaperArchive progress={store.pyqProgress ?? {}} onProgress={(paperId,value)=>setStore(current=>({...current,pyqProgress:{...(current.pyqProgress??{}),[paperId]:value}}))}/>} {view === 'mocks' && <Mocks attempts={store.attempts} onQuiz={beginQuiz}/>} {view === 'analysis' && <Analysis store={store} onNavigate={navigate}/>}</div>
     </main>{profileOpen && <ProfilePanel store={store} setStore={setStore} cloud={cloud} onClose={() => setProfileOpen(false)}/>} {quiz && <QuizRunner quiz={quiz} onClose={closeQuiz} onSubmit={recordAttempt}/>} </div>
 }
 
@@ -67,8 +68,6 @@ function PracticeCard({item,number,saved,onSave}:{item:Question;number:number;sa
   const [open,setOpen]=useState(false), [choice,setChoice]=useState<number|null>(null)
   return <article className="practice-card"><div className="question-meta"><span>{item.subject} / {item.topic}</span><div><em>{item.difficulty}</em><span><TimerReset size={13}/>{item.seconds}s</span></div></div><div className="question-row"><span className="q-index">{String(number).padStart(2,'0')}</span><h3>{item.question}</h3></div><div className="mini-options">{item.options.map((option,i)=><button key={option} onClick={()=>setChoice(i)} className={`${choice===i?'selected':''} ${open&&i===item.answer?'correct':''} ${open&&choice===i&&i!==item.answer?'wrong':''}`}><span>{String.fromCharCode(65+i)}</span>{option}</button>)}</div><div className="question-actions"><button onClick={()=>setOpen(!open)}><CircleHelp size={15}/>{open?'Hide solution':'Check answer'}</button><button onClick={onSave}>{saved?'Saved':'Save for revision'}</button></div>{open&&<div className="solution"><strong>{choice===item.answer?'Correct — well done.':`Answer: ${String.fromCharCode(65+item.answer)}. ${item.options[item.answer]}`}</strong><p>{item.explanation}</p><small>{item.source}</small></div>}</article>
 }
-
-function PaperArchive() { return <><PageHead eyebrow="Source library" title="Past papers, with provenance." copy="AP papers stay separate. Other-state SI papers feed topic practice only after source and rights checks."/><section className="archive-callout"><div><ShieldCheck size={22}/><div><strong>No false 25-year claim</strong><p>An official complete 20–25 year AP archive could not be verified. This library labels what is official, mirrored or community-supplied and links out to the source.</p></div></div></section><div className="archive-grid"><section><div className="section-head"><div><span className="eyebrow">Andhra Pradesh</span><h2>AP SI papers & keys</h2></div><span>{archives.length} indexed</span></div><div className="archive-list">{archives.map(a=><a href={a.url} target="_blank" key={a.year}><span className="year-badge">{a.year}</span><div><strong>{a.title}</strong><p>{a.detail}</p><small>{a.status}</small></div><ExternalLink size={17}/></a>)}</div></section><section><div className="section-head"><div><span className="eyebrow">Cross-state training</span><h2>Verified official sources</h2></div></div><div className="state-source"><strong>Kerala PSC · SI Main 2024</strong><p>Official question paper and answer-key page. Use it to stretch General Studies and aptitude practice.</p><a href="https://www.keralapsc.gov.in/index.php/sub-inspector-police-armed-police-sub-inspector-main-examination" target="_blank">Open official paper <ExternalLink size={14}/></a></div><div className="state-source"><strong>SSC CPO answer-key archive</strong><p>Central SI-related source. Availability of candidate papers may expire.</p><a href="https://ssc.nic.in/Portal/AnswerKey" target="_blank">Open SSC archive <ExternalLink size={14}/></a></div></section></div><div className="citation-guide"><span>PROVENANCE LEGEND</span><div><em className="official">Official</em> Board-hosted source</div><div><em className="mirror">Verified mirror</em> Archived copy of a named notice</div><div><em className="community">Community</em> Needs manual verification</div></div></> }
 
 function Mocks({ attempts, onQuiz }: { attempts: Attempt[]; onQuiz:(q:Quiz)=>void }) {
   const [filter,setFilter]=useState<'All'|'Full paper'|'Sectional'>('All'), list=mockSeries.filter(m=>filter==='All'||m.type===filter)
