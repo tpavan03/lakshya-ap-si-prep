@@ -53,6 +53,7 @@
 .hard-topic-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 22px}.hard-topic-grid button{position:relative;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:16px 38px 16px 16px;text-align:left;color:var(--ink);min-width:0}.hard-topic-grid button>span,.hard-topic-grid button>strong,.hard-topic-grid button>small{display:block}.hard-topic-grid button>span{font:500 8px/1 'DM Mono';letter-spacing:.7px;color:var(--red);text-transform:uppercase}.hard-topic-grid button>strong{font:700 17px/1.15 'Newsreader';margin:7px 0 5px}.hard-topic-grid button>small{font-size:8px;color:var(--muted)}.hard-topic-grid button>i{position:absolute;right:13px;top:50%;transform:translateY(-50%);font-style:normal;color:#87918c}.hard-topic-grid button.active{border-color:#9f4035;background:#f5e7e3;box-shadow:inset 3px 0 #9f4035}.hard-topic-grid button.active>i{color:#9f4035}
 .hard-topic-section{margin-top:8px}.hard-topic-head{display:flex;align-items:flex-end;justify-content:space-between;gap:25px;margin-bottom:14px;padding:24px 0 15px;border-bottom:1px solid var(--line)}.hard-topic-head h2{font:700 31px/1 'Newsreader';margin:9px 0 5px}.hard-topic-head p{font-size:9px;color:var(--muted);margin:0}
 .mobile-quiz-submit{display:none!important}
+.practice-select{flex:0 1 auto;max-width:210px}.practice-select select{max-width:125px;text-overflow:ellipsis}.practice-library-summary{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;background:var(--navy);color:white;border-radius:9px;padding:14px 17px;margin-bottom:12px}.practice-library-summary strong{font:700 25px/1 'Newsreader';color:var(--lime)}.practice-library-summary span{font-size:10px;font-weight:800}.practice-library-summary small{color:#a9b9b9;font-size:8px}.load-more{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:12px;border:1px solid #cbd1cb;background:var(--paper);color:var(--green);border-radius:8px;min-height:45px;font-size:10px;font-weight:800}
 
 @media(max-width:1050px){.hard-topic-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){
@@ -60,4 +61,5 @@
   .hard-brief{grid-template-columns:1fr;padding:23px 20px}.hard-brief>div:last-child{text-align:left}.hard-brief>div:last-child strong{font-size:31px}
   .hard-topic-grid{grid-template-columns:1fr;max-height:310px;overflow:auto;padding-right:2px}
   .hard-topic-head{align-items:flex-start;flex-direction:column}.hard-topic-head .secondary-button{width:100%}
+  .practice-select{max-width:none;width:100%}.practice-select select{max-width:60vw}.practice-library-summary{grid-template-columns:auto 1fr}.practice-library-summary small{grid-column:1/-1}
 }

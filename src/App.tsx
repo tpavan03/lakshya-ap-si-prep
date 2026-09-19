@@ -85,6 +85,9 @@ function Practice({
 }) {
   const [subject, setSubject] = useState<"All" | Subject>("All"),
     [search, setSearch] = useState(""),
+    [topic, setTopic] = useState("All"),
+    [difficulty, setDifficulty] = useState<"All" | Question["difficulty"]>("All"),
+    [visibleCount, setVisibleCount] = useState(20),
     [mode, setMode] = useState<"standard" | "hard">("standard"),
     [activeHardTopic, setActiveHardTopic] = useState("");
   const subjects: ("All" | Subject)[] = [
@@ -98,10 +101,11 @@ function Practice({
   const subjectPool = questions.filter(
     (item) => subject === "All" || item.subject === subject,
   );
+  const topicOptions = [...new Set(subjectPool.map((item) => item.topic))].sort();
   const filtered = subjectPool.filter((item) =>
-    `${item.question} ${item.topic}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
+    (topic === "All" || item.topic === topic) &&
+    (mode === "hard" || difficulty === "All" || item.difficulty === difficulty) &&
+    `${item.question} ${item.topic}`.toLowerCase().includes(search.toLowerCase()),
   );
   const hardPool = filtered.filter((item) => item.difficulty === "Hard");
   const hardGroups = Array.from(
@@ -153,12 +157,13 @@ function Practice({
         action={
           <button
             className="primary-button"
+            disabled={mode === "hard" ? hardPool.length === 0 : filtered.length === 0}
             onClick={
               mode === "hard"
                 ? startHardDrill
                 : () =>
                     onQuiz(
-                      makeQuiz(subject === "All" ? undefined : subject, 10),
+                      makePracticeQuiz(filtered, topic === "All" ? `${subject} mixed practice` : `${topic} practice`),
                     )
             }
           >
@@ -170,13 +175,13 @@ function Practice({
       <div className="practice-mode-tabs">
         <button
           className={mode === "standard" ? "active" : ""}
-          onClick={() => setMode("standard")}
+          onClick={() => { setMode("standard"); setVisibleCount(20) }}
         >
           <Brain size={16} /> Standard practice
         </button>
         <button
           className={mode === "hard" ? "active" : ""}
-          onClick={() => setMode("hard")}
+          onClick={() => { setMode("hard"); setVisibleCount(20) }}
         >
           <Flame size={16} /> Hard challenges
         </button>
@@ -186,7 +191,7 @@ function Practice({
           <Search size={17} />
           <input
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => { setSearch(event.target.value); setVisibleCount(20) }}
             placeholder="Search a topic or question"
           />
         </div>
@@ -197,6 +202,8 @@ function Practice({
               className={subject === item ? "active" : ""}
               onClick={() => {
                 setSubject(item);
+                setTopic("All");
+                setVisibleCount(20);
                 setActiveHardTopic("");
               }}
             >
@@ -204,10 +211,12 @@ function Practice({
             </button>
           ))}
         </div>
+        <label className="archive-select practice-select"><span>Topic</span><select value={topic} onChange={(event)=>{setTopic(event.target.value);setVisibleCount(20)}}><option>All</option>{topicOptions.map(item=><option key={item}>{item}</option>)}</select></label>
+        {mode === "standard" && <label className="archive-select practice-select"><span>Level</span><select value={difficulty} onChange={(event)=>{setDifficulty(event.target.value as "All"|Question["difficulty"]);setVisibleCount(20)}}>{["All","Easy","Medium","Hard"].map(item=><option key={item}>{item}</option>)}</select></label>}
       </div>
       {mode === "standard" ? (
-        <div className="question-list">
-          {filtered.map((item, index) => (
+        <><div className="practice-library-summary"><strong>{filtered.length.toLocaleString("en-IN")}</strong><span>questions match this library view</span><small>Showing {Math.min(visibleCount,filtered.length)} at a time for faster browsing.</small></div><div className="question-list">
+          {filtered.slice(0,visibleCount).map((item, index) => (
             <PracticeCard
               key={item.id}
               item={item}
@@ -215,8 +224,7 @@ function Practice({
               saved={saved.includes(item.id)}
               onSave={() => toggleSave(item.id)}
             />
-          ))}
-        </div>
+          ))}</div>{visibleCount<filtered.length&&<button className="load-more" onClick={()=>setVisibleCount(count=>count+20)}>Load 20 more <ArrowRight size={15}/></button>}</>
       ) : (
         <>
           <section className="hard-brief">
@@ -248,7 +256,7 @@ function Practice({
                     <button
                       key={key}
                       className={selectedGroup?.[0] === key ? "active" : ""}
-                      onClick={() => setActiveHardTopic(key)}
+                      onClick={() => { setActiveHardTopic(key); setVisibleCount(20) }}
                     >
                       <span>{items[0].subject}</span>
                       <strong>{items[0].topic}</strong>
@@ -288,7 +296,7 @@ function Practice({
                     </button>
                   </div>
                   <div className="question-list">
-                    {selectedGroup[1].map((item, index) => (
+                    {selectedGroup[1].slice(0,visibleCount).map((item, index) => (
                       <PracticeCard
                         key={item.id}
                         item={item}
@@ -297,7 +305,7 @@ function Practice({
                         onSave={() => toggleSave(item.id)}
                       />
                     ))}
-                  </div>
+                  </div>{visibleCount<selectedGroup[1].length&&<button className="load-more" onClick={()=>setVisibleCount(count=>count+20)}>Load 20 more <ArrowRight size={15}/></button>}
                 </section>
               )}
             </>
@@ -360,6 +368,10 @@ function makeQuiz(subject?: Subject, count = 10): Quiz {
     ),
     minutes: Math.max(10, Math.round(count * 1.2)),
   };
+}
+function makePracticeQuiz(pool: Question[], title: string, count = 10): Quiz {
+  const items = seeded(pool, Number(todayKey().replaceAll("-", "")) + pool.length * 17).slice(0, Math.min(count, pool.length));
+  return { title, items, minutes: Math.max(1, Math.ceil(items.reduce((sum, item) => sum + item.seconds, 0) / 60)) };
 }
 function makeHardQuiz(pool: Question[], title: string, count = 10): Quiz {
   const items = seeded(
