@@ -15,8 +15,9 @@ A focused, local-first preparation workspace for the Andhra Pradesh Police Sub I
 - Official 2026 exam profile with direct SLPRB notification access
 - Concept maps and trusted source links for every major syllabus area
 - Original practice questions with hints, worked explanations, difficulty, and target time
-- AP paper source library with provenance labels
-- Other-state official SI paper sources for topic-wise training
+- Paper-level AP archive with direct paper/key links, stage filters, provenance labels, and review status
+- Persistent split-screen attempt mode for the verified 2018 Prelims Paper I Booklet C scan and its 100-entry official key
+- Official Kerala and Rajasthan SI papers with answer keys for topic-wise training
 - 313 unique original questions across all five subject groups
 - 50 deterministic mock-test blueprints: 40 sectionals and 10 full 100-question simulations
 - Full-screen timer, question palette, answer state, hints, and review flags
@@ -27,7 +28,9 @@ A focused, local-first preparation workspace for the Andhra Pradesh Police Sub I
 
 The current release contains 313 reviewed, original questions. Every full mock draws 100 unique items without repetition inside that attempt, and each numbered mock remains reproducible on retry. Questions may reappear across different numbered mocks so performance can be compared against a stable editorial bank.
 
-Lakshya does not claim a complete 20–25 year official AP SI archive because one could not be verified. The archive distinguishes official board sources, verified mirrors, and material that still needs review. Commercial books such as R.S. Aggarwal are linked as references and are not copied.
+The PYQ catalogue currently indexes 16 AP archive records: 13 retrievable question-paper records and three older key-only records covering the surviving 2008(2), 2011, 2016, 2018 and 2023 material. The 2016, 2018 and 2023 prelims and final-written objective papers represent 1,800 questions; the 2011 community scan raises visible paper coverage to about 2,000 questions. Eight government-hosted Kerala and Rajasthan papers provide additional practice. The first interactive companion covers the full 2018 Prelims Paper I Booklet C: the 100-option key was transcribed from the APSLPRB key and cross-checked 100/100 against a separate solved copy. Its answer state and last question are stored with the rest of the user profile.
+
+Lakshya does not claim a complete 20–25 year official AP SI archive because one could not be verified and AP SI recruitment was not conducted every year. The catalogue counts distinct papers rather than Set A/B/C/D reorderings. It distinguishes official sources, verified mirrors, community scans and surviving answer-key records. PDFs remain linked to their source; interactive imports are released only after question order, options and booklet-specific keys are checked. Commercial books such as R.S. Aggarwal are linked as references and are not copied.
 
 ## Run locally
 
