@@ -25,6 +25,11 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          # The action's old default requests Google's retired "tools" package.
+          # Install only the SDK packages used by this Capacitor/AGP build.
+          packages: 'platform-tools platforms;android-35 build-tools;34.0.0 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: false
       - name: Check cloud configuration
         shell: bash
         run: |

@@ -49,7 +49,7 @@ The established `apsi-command:v1` local key and Supabase `user_state` table rema
 
 Writing drafts and active tests stay on the device. Account-scoped writing drafts prevent another signed-in candidate seeing them. Export before clearing browser data.
 
-**Deployment verification on 28 October 2026:** both the configured exam backend hostname and the separately hosted Saapadu backend hostname returned NXDOMAIN. This release preserves the existing connection; live authenticated persistence cannot be certified until the Supabase projects are restored or the settings are corrected. Local preparation remains available. Restoring the endpoint does not require a database redesign. After restoration, verify `/auth/v1/health`, the configured Google provider, per-user read/write isolation and cross-device reload.
+**Backend verification on 28 October 2026:** after the existing Supabase project was resumed, auth health and settings returned **200**, with **Google and email enabled**. The progress endpoint currently returns **404 / PGRST205** (`public.user_state` unavailable in the schema cache). Check the existing project’s table and apply [`001_user_state.sql`](supabase/migrations/001_user_state.sql) if it is absent, or correct its schema exposure/cache if present. Authenticated progress save/reload and hosted RLS remain unverified until that endpoint is available. Device-only preparation and JSON backups work meanwhile. See [`docs/backend-verification.md`](docs/backend-verification.md) for the exact checks.
 
 ## Android
 
