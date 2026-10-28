@@ -24,6 +24,8 @@ export type PreviousPaper = {
   interactive: InteractiveStatus
   note?: string
   options?: number
+  /** Historical papers can use a composite clock instead of today's section locks. */
+  sectionalTiming?: boolean
 }
 
 const careerPower = 'https://www.careerpower.in/ap-police-si-previous-year-question-papers.html'
@@ -207,7 +209,7 @@ export const niclPapers: PreviousPaper[] = [
     id: 'nicl-2025-prelims', examId: 'nicl-ao', state: 'National', year: 2025,
     stage: 'Prelims', paper: 'Phase I', subject: 'English · Reasoning · Quantitative aptitude',
     title: 'NICL AO Prelims 2025 — publisher reconstruction', examDate: '20 Jul 2025',
-    questions: 100, minutes: 60, languages: ['English'], options: 5,
+    questions: 100, minutes: 60, languages: ['English'], options: 5, sectionalTiming: true,
     status: 'Memory-based', interactive: 'Ready',
     paperUrl: 'https://www.adda247.com/jobs/wp-content/uploads/2026/10/17145753/NICL-AO-Prelims-Memory-Based-Paper-20-July-2025.pdf',
     answerKeyUrl: 'https://www.adda247.com/jobs/wp-content/uploads/2026/10/17145753/NICL-AO-Prelims-Memory-Based-Paper-20-July-2025.pdf',
@@ -218,11 +220,22 @@ export const niclPapers: PreviousPaper[] = [
     id: 'nicl-2024-prelims', examId: 'nicl-ao', state: 'National', year: 2024,
     stage: 'Prelims', paper: 'Phase I', subject: 'English · Reasoning · Quantitative aptitude',
     title: 'NICL AO Prelims 2024 — publisher reconstruction', examDate: '04 Mar 2024',
-    questions: 100, minutes: 60, languages: ['English'], options: 5,
+    questions: 100, minutes: 60, languages: ['English'], options: 5, sectionalTiming: true,
     status: 'Memory-based', interactive: 'Ready',
     paperUrl: 'https://www.bankersadda.com/wp-content/uploads/multisite/2025/06/17110211/NICL-AO-Prelims-2024-Memory-Based-Paper.pdf',
     answerKeyUrl: 'https://www.bankersadda.com/wp-content/uploads/multisite/2025/06/17110211/NICL-AO-Prelims-2024-Memory-Based-Paper.pdf',
     sourceUrl: 'https://www.adda247.com/jobs/nicl-ao-previous-year-question-paper/',
     note: 'BankersAdda memory-based reconstruction. The answer sheet uses the publisher’s 100-answer key, not an official NICL key. Solutions remain visible in the source PDF. Each section is timed separately for 20 minutes.',
+  },
+  {
+    id: 'nicl-2017-prelims', examId: 'nicl-ao', state: 'National', year: 2017,
+    stage: 'Prelims', paper: 'Phase I', subject: 'English · Reasoning · Quantitative aptitude',
+    title: 'NICL AO Prelims 2017 — publisher reconstruction', examDate: '03 Jun 2017',
+    questions: 100, minutes: 60, languages: ['English'], options: 5, sectionalTiming: false,
+    status: 'Memory-based', interactive: 'PDF only',
+    paperUrl: 'https://cdn-images.prepp.in/public/image/NICL_AO_2017_English_2b6485b5272f50e0677abcb6c75425ea.pdf',
+    answerKeyUrl: 'https://cdn-images.prepp.in/public/image/NICL_AO_2017_English_2b6485b5272f50e0677abcb6c75425ea.pdf',
+    sourceUrl: 'https://testbook.com/nicl-ao/previous-year-papers',
+    note: 'Full 100-question Prepp-hosted reconstruction with embedded Testbook solutions, explicitly dated 3 June 2017. Not an official NICL booklet or key. This historical paper uses one composite 60-minute clock; current-cycle section timing is shown separately. Answers require manual review against the source PDF.',
   },
 ]

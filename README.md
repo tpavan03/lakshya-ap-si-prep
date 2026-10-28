@@ -11,7 +11,7 @@ A preparation desk for **AP Police SI** and **NICL AO Generalist / Information T
 - NICL Generalist Mains: five 50-question sections, 180 minutes total.
 - NICL IT Mains: five common 40-question sections plus 50 professional IT questions, using the specialist section timings.
 - NICL objective marking: +1 correct, −0.25 wrong, 0 unanswered. Descriptive English is a separate 30-minute qualifying practice desk with essay, précis and comprehension.
-- Thirty reproducible editions per paper, strict full-paper coverage, hard-weighted and topic-diverse selection, resume across reloads, review flags, absolute section deadlines, detailed post-test answers and subject reports.
+- Thirty visibly numbered mock tests per paper, strict full-paper coverage, hard-weighted and topic-diverse selection, resume across reloads, review flags, absolute section deadlines, detailed post-test answers and subject reports.
 - Custom practice by subjects, topic, difficulty, count and time, including saved questions and mistakes.
 
 Patterns are sourced from the 2026 notifications in [exam sources](docs/exam-sources.md). Simulations contain **editorially authored practice**, not historical questions. AP Civil weighting is explicit; AR merit weighting differs. No fabricated ranks, cutoffs or exam dates are shown.
@@ -20,7 +20,7 @@ Patterns are sourced from the 2026 notifications in [exam sources](docs/exam-sou
 
 The existing AP library has 4,631 questions. NICL adds 627 original questions across quantitative aptitude, reasoning, English, general awareness, computer knowledge and IT professional knowledge, plus seven study chapters. Parameterized question families are disclosed; those variants are not different historical papers.
 
-The archive retains 24 SI records and adds two NICL publisher reconstructions. Three AP original scans have matched booklet-specific keys, including the amended dual answer for 2023 Paper II Q95. NICL 2024/2025 papers are explicitly **memory-based**, use publisher keys, and retain visible source solutions. Other original scans have timed manual answer sheets when timing is verified; no score is invented without a matching key. See [paper provenance](docs/paper-provenance.md).
+The archive retains 24 SI records and adds three NICL publisher reconstructions. Three AP original scans have matched booklet-specific keys, including the amended dual answer for 2023 Paper II Q95. NICL 2017/2024/2025 papers are explicitly **memory-based**, retain visible source solutions. The 2024/2025 papers use matched publisher keys; 2017 has a full source PDF and manual answer-sheet review with its historical composite timer. Other original scans have timed manual answer sheets when timing is verified; no score is invented without a matching key. See [paper provenance](docs/paper-provenance.md).
 
 ## Local development and checks
 

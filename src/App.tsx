@@ -143,6 +143,7 @@ export default function App() {
   }, [store]);
   useEffect(() => {
     const p = new URLSearchParams({
+      ...Object.fromEntries(new URLSearchParams(window.location.search)),
       exam: examId,
       view,
       stage,
@@ -314,7 +315,7 @@ export default function App() {
       >
         <Settings2 size={18} /> Profile & backup
       </button>
-      <small className="sidebar-version">EXAM PREP KING / 2.0</small>
+      <small className="sidebar-version">EXAM PREP KING / 2.0.1</small>
     </>
   );
   return (
@@ -428,6 +429,7 @@ export default function App() {
               stage={stage}
               setStage={setStage}
               bank={bank}
+              attempts={progress.attempts}
               onStart={begin}
               onError={setError}
             />
@@ -454,6 +456,7 @@ export default function App() {
             <PaperArchive
               key={`${examId}-${stream}`}
               examId={examId}
+              onTests={() => navigate("tests")}
               progress={progress.pyqProgress}
               onProgress={(id, value) =>
                 updateProgress((p) => ({

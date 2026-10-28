@@ -9,6 +9,7 @@ export function getPaperAttemptState(
   now: number,
 ) {
   const nicl = paper.examId === "nicl-ao";
+  const sectionalTiming = nicl && paper.sectionalTiming !== false;
   const count = paper.questions ?? 100;
   const key = paperAnswerKeys[paper.id];
   const started = typeof progress.startedAt === "number";
@@ -16,10 +17,15 @@ export function getPaperAttemptState(
   const elapsed = started
     ? Math.max(0, Math.floor((now - progress.startedAt!) / 1000))
     : 0;
-  const sectionIndex = nicl ? Math.min(2, Math.floor(elapsed / 1200)) : 0;
-  const lower = nicl && !progress.submitted ? [0, 30, 65][sectionIndex] : 0;
+  const sectionIndex = sectionalTiming
+    ? Math.min(2, Math.floor(elapsed / 1200))
+    : 0;
+  const lower =
+    sectionalTiming && !progress.submitted ? [0, 30, 65][sectionIndex] : 0;
   const upper =
-    nicl && !progress.submitted ? [29, 64, 99][sectionIndex] : count - 1;
+    sectionalTiming && !progress.submitted
+      ? [29, 64, 99][sectionIndex]
+      : count - 1;
   const current = Math.min(upper, Math.max(lower, progress.current ?? 0));
   const selected = progress.answers[String(current)];
   const answered = Object.entries(progress.answers).filter(
@@ -51,11 +57,12 @@ export function getPaperAttemptState(
         ),
       )
     : duration;
-  const sectionRemaining = nicl
+  const sectionRemaining = sectionalTiming
     ? Math.min(remaining, Math.max(0, (sectionIndex + 1) * 1200 - elapsed))
     : remaining;
   return {
     nicl,
+    sectionalTiming,
     count,
     key,
     started,

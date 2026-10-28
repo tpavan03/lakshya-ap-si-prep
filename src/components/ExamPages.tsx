@@ -1,10 +1,11 @@
 import { fmt } from "../lib/format";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   BookOpen,
   Brain,
   Check,
+  ChevronLeft,
   ChevronRight,
   Clock3,
   ExternalLink,
@@ -39,6 +40,7 @@ import {
 import type { ExamProgress } from "../lib/store";
 import { Dialog, Empty, PageHead } from "./ui";
 import { WritingDesk } from "./WritingDesk";
+import "./TestSeries.css";
 
 export function Dashboard({
   name,
@@ -306,6 +308,7 @@ export function Tests({
   stage,
   setStage,
   bank,
+  attempts,
   onStart,
   onError,
 }: {
@@ -315,19 +318,59 @@ export function Tests({
   stage: Stage;
   setStage: (s: Stage) => void;
   bank: Question[];
+  attempts: Attempt[];
   onStart: (q: Quiz) => void;
   onError: (e: string) => void;
 }) {
-  const [seed, setSeed] = useState(1),
-    [writing, setWriting] = useState<string | null>(null),
-    [preview, setPreview] = useState<Quiz | null>(null),
-    blueprints = getBlueprints(examId, stage, stream);
-  const prepare = (id: string) => {
+  const [writing, setWriting] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Quiz | null>(null);
+  const [paperId, setPaperId] = useState(
+    () => new URLSearchParams(location.search).get("paper") ?? "",
+  );
+  const [page, setPage] = useState(
+    () =>
+      Math.max(
+        0,
+        Math.min(
+          4,
+          Math.trunc(
+            Number(new URLSearchParams(location.search).get("testPage") || 1),
+          ) - 1,
+        ),
+      ) || 0,
+  );
+  const blueprints = getBlueprints(examId, stage, stream);
+  const paper = blueprints.find((item) => item.id === paperId) ?? blueprints[0];
+  const listRef = useRef<HTMLElement>(null);
+  const testsPerPage = 6,
+    totalTests = 30,
+    pageCount = totalTests / testsPerPage;
+  const firstTest = page * testsPerPage + 1;
+  const completed = (seed: number) =>
+    attempts.find(
+      (attempt) =>
+        attempt.blueprintId === paper.id &&
+        attempt.id.startsWith(`${examId}-${paper.id}-${seed}-`),
+    );
+  const completedCount = Array.from({ length: totalTests }, (_, index) =>
+    completed(index + 1),
+  ).filter(Boolean).length;
+  useEffect(() => {
+    const url = new URL(location.href);
+    url.searchParams.set("paper", paper.id);
+    url.searchParams.set("testPage", String(page + 1));
+    history.replaceState(null, "", url);
+  }, [page, paper.id]);
+  const prepare = (seed: number) => {
     try {
-      setPreview(createExamQuiz(examId, stage, id, seed, bank));
+      setPreview(createExamQuiz(examId, stage, paper.id, seed, bank));
     } catch (e) {
       onError((e as Error).message);
     }
+  };
+  const changePage = (next: number) => {
+    setPage(next);
+    listRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
   };
   return (
     <>
@@ -336,7 +379,14 @@ export function Tests({
         title="Rehearse the real thing."
         copy="Full-length simulations use the exam’s question counts, marking and time limits. Every set includes a detailed post-test review."
       />
-      <StageTabs stage={stage} onChange={setStage} />
+      <StageTabs
+        stage={stage}
+        onChange={(next) => {
+          setStage(next);
+          setPaperId("");
+          setPage(0);
+        }}
+      />
       <div className="pattern-notice">
         <ShieldCheck size={20} />
         <p>{EXAMS[examId].patternNote}</p>
@@ -344,71 +394,179 @@ export function Tests({
           Source <ExternalLink size={14} />
         </a>
       </div>
-      <div className="test-toolbar">
-        <span>Original practice · Pattern-aligned simulations</span>
-        <label>
-          Test edition
-          <select
-            aria-label="Test edition"
-            value={seed}
-            onChange={(e) => setSeed(Number(e.target.value))}
-          >
-            {Array.from({ length: 30 }, (_, i) => (
-              <option key={i} value={i + 1}>
-                {String(i + 1).padStart(2, "0")}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="test-grid">
-        {blueprints.map((b) => (
-          <article className="test-card" key={b.id}>
-            <div className="test-card-top">
-              <span className="badge blue">
-                {stage === "prelims" ? "PRELIMS" : "MAINS"}
-              </span>
-              <span>EDITION {String(seed).padStart(2, "0")}</span>
-            </div>
-            <div className="test-symbol">
-              <FileCheck2 size={28} />
-            </div>
-            <h2>{b.title}</h2>
-            <div className="test-facts">
-              <span>
-                <FileText size={15} />
-                {b.questions} questions
-              </span>
-              <span>
-                <Clock3 size={15} />
-                {b.minutes} minutes
-              </span>
-              <span>
-                {b.negativeMark ? `−${b.negativeMark} / wrong` : "No deduction"}
-              </span>
-            </div>
-            <div className="test-sections">
-              {b.sections.map((s) => (
-                <div key={s.id}>
-                  <span>{s.title}</span>
-                  <strong>
-                    {s.questions} Q <small>· {s.minutes} min</small>
-                  </strong>
-                </div>
-              ))}
-            </div>
+      <section className="series-overview" aria-label="Test series overview">
+        <div>
+          <span className="eyebrow">YOUR FULL-LENGTH TEST LIBRARY</span>
+          <h2>{blueprints.length * totalTests} full-length tests</h2>
+          <p>
+            {blueprints.length > 1
+              ? `${totalTests} numbered tests for each paper. Choose a paper, then pick a test below.`
+              : "Browse all 30 numbered mocks below. Every test follows your selected exam and stream."}
+          </p>
+        </div>
+        <span className="series-overview-icon">
+          <FileCheck2 size={32} />
+        </span>
+      </section>
+      {blueprints.length > 1 && (
+        <div className="series-paper-tabs" aria-label="Choose an exam paper">
+          {blueprints.map((item) => (
             <button
-              className="primary-button full"
-              onClick={() => prepare(b.id)}
+              key={item.id}
+              aria-pressed={paper.id === item.id}
+              className={paper.id === item.id ? "active" : ""}
+              onClick={() => {
+                setPaperId(item.id);
+                setPage(0);
+              }}
             >
-              View instructions <ArrowRight size={16} />
+              <strong>{item.title}</strong>
+              <span>
+                {totalTests} tests · {item.questions} questions each
+              </span>
             </button>
-            <small className="test-note">
-              Stable edition for repeat comparison · New edition, new selection
-            </small>
-          </article>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+      <section className="series-pattern" aria-label="Selected paper pattern">
+        <div>
+          <strong>{paper.title}</strong>
+          <span>
+            {paper.questions} questions · {paper.minutes} minutes ·{" "}
+            {paper.negativeMark
+              ? `−${paper.negativeMark} per wrong answer`
+              : "No negative marking"}
+          </span>
+        </div>
+        <div className="series-section-list">
+          {paper.sections.map((section) => (
+            <span key={section.id}>
+              <strong>{section.title}</strong>
+              {section.questions} Q · {section.minutes} min
+            </span>
+          ))}
+        </div>
+      </section>
+      <section
+        className="series-library"
+        ref={listRef}
+        aria-label="Available mock tests"
+      >
+        <div className="series-library-heading">
+          <div>
+            <h2>Choose your next test</h2>
+            <p role="status">
+              Tests {firstTest}–{firstTest + testsPerPage - 1} of {totalTests} ·{" "}
+              {completedCount} completed
+            </p>
+          </div>
+          <span className="badge">{totalTests} tests available</span>
+        </div>
+        <div className="series-test-grid">
+          {Array.from({ length: testsPerPage }, (_, index) => {
+            const seed = firstTest + index,
+              result = completed(seed),
+              number = String(seed).padStart(2, "0");
+            return (
+              <article
+                className={`series-test-card ${result ? "completed" : ""}`}
+                key={`${paper.id}-${seed}`}
+              >
+                <div className="series-test-top">
+                  <span className="series-test-number">TEST {number}</span>
+                  <span className={`badge ${result ? "correct" : ""}`}>
+                    {result ? (
+                      <>
+                        <Check size={12} /> Completed
+                      </>
+                    ) : (
+                      "Not attempted"
+                    )}
+                  </span>
+                </div>
+                <h3>
+                  {stage === "prelims" ? "Prelims" : "Mains"} mock test {number}
+                </h3>
+                <p>
+                  {examId === "nicl-ao"
+                    ? `${stream === "it" ? "IT Specialist" : "Generalist"} · Full-length simulation`
+                    : paper.title}
+                </p>
+                <div className="series-test-facts">
+                  <span>
+                    <FileText size={15} />
+                    {paper.questions} questions
+                  </span>
+                  <span>
+                    <Clock3 size={15} />
+                    {paper.minutes} minutes
+                  </span>
+                </div>
+                <div className="series-test-result">
+                  {result ? (
+                    <>
+                      <strong>
+                        Last score: {fmt(result.score)} / {result.maxMarks}
+                      </strong>
+                      <span>
+                        {new Date(result.date).toLocaleDateString("en-IN")}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={15} />
+                      <span>Worked solutions after submission</span>
+                    </>
+                  )}
+                </div>
+                <button
+                  className={
+                    result ? "secondary-button full" : "primary-button full"
+                  }
+                  onClick={() => prepare(seed)}
+                >
+                  {result ? "Retake" : "Start"} test {number}
+                  <ArrowRight size={16} />
+                </button>
+              </article>
+            );
+          })}
+        </div>
+        <nav className="series-pagination" aria-label="Test series pages">
+          <button
+            className="secondary-button"
+            disabled={page === 0}
+            onClick={() => changePage(page - 1)}
+          >
+            <ChevronLeft size={16} /> Previous
+          </button>
+          <div>
+            {Array.from({ length: pageCount }, (_, index) => (
+              <button
+                key={index}
+                className={page === index ? "active" : ""}
+                aria-current={page === index ? "page" : undefined}
+                aria-label={`Tests ${index * testsPerPage + 1} to ${(index + 1) * testsPerPage}`}
+                onClick={() => changePage(index)}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+          <button
+            className="secondary-button"
+            disabled={page === pageCount - 1}
+            onClick={() => changePage(page + 1)}
+          >
+            Next
+            <ChevronRight size={16} />
+          </button>
+        </nav>
+        <p className="series-footnote">
+          Each numbered mock keeps the same question selection when you retake
+          it. Questions can overlap between different mocks.
+        </p>
+      </section>
       {stage === "mains" && (
         <section className="writing-card">
           <div>

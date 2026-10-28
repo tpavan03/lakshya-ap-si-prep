@@ -57,7 +57,7 @@ Subtle card shadows only; overlays are distinct and the active test has an unint
 20px cards, 10px controls, pill metadata. The crown icon belongs to the brand, not every card. Lucide icons always accompany clear labels on primary actions.
 
 ## Components
-Shared page headers, buttons, badges, native selects and a native-dialog based modal. Native selects deliberately use OS popup behavior. Test runner owns scoring and section timers through examEngine. Reports share the same correct/wrong/unanswered vocabulary as the runner. All owned scroll regions inherit the global scrollbar tokens.
+Shared page headers, buttons, badges, native selects and a native-dialog based modal. Native selects deliberately use OS popup behavior. Test runner owns scoring and section timers through examEngine. Reports share the same correct/wrong/unanswered vocabulary as the runner. Test series expose 30 numbered mock cards per paper, six per page, with a total count, visible page buttons and completion/score states. Paper archive search and native selects use labeled grid fields with natural height, app typography and a compact source note; original source details remain expandable. All owned scroll regions inherit the global scrollbar tokens.
 
 ## Do's and Don'ts
 Show the paper identity, source quality, question count and time before starting. Keep editorial practice and memory-based reconstructions visibly distinct from original papers. Never invent official cutoffs, ranks, current affairs, verification dates or specialist coverage. Avoid hero images, celebratory clutter and making a full simulation silently shorter when the bank is insufficient.

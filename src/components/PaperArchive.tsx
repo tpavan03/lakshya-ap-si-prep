@@ -25,6 +25,8 @@ import {
   paperAnswerMatches,
 } from "../paperKeys";
 import { getPaperAttemptState, recordPaperAnswer } from "../lib/paperAttempt";
+import { PageHead } from "./ui";
+import "./PaperArchive.css";
 
 export type PaperAttemptProgress = {
   answers: Record<string, number>;
@@ -40,6 +42,7 @@ type Props = {
   stage?: "prelims" | "mains";
   progress: Record<string, PaperAttemptProgress>;
   onProgress: (paperId: string, value: PaperAttemptProgress) => void;
+  onTests?: () => void;
 };
 const statusClass: Record<PaperStatus, string> = {
   Official: "official",
@@ -50,7 +53,6 @@ const statusClass: Record<PaperStatus, string> = {
 };
 const stageName = (stage?: "prelims" | "mains"): "All" | PaperStage =>
   stage === "prelims" ? "Prelims" : stage === "mains" ? "Final written" : "All";
-
 export function PaperArchive(props: Props) {
   return (
     <PaperArchiveContent
@@ -59,25 +61,25 @@ export function PaperArchive(props: Props) {
     />
   );
 }
-
 function PaperArchiveContent({
   examId = "ap-si",
   stage: initialStage,
   progress,
   onProgress,
+  onTests,
 }: Props) {
+  const isNicl = examId === "nicl-ao",
+    catalogue = isNicl ? niclPapers : previousPapers;
   const [scope, setScope] = useState<"Target exam" | "Other states">(
     "Target exam",
   );
   const [stage, setStage] = useState<"All" | PaperStage>(
     stageName(initialStage),
   );
-  const [year, setYear] = useState<"All" | number>("All");
-  const [query, setQuery] = useState("");
+  const [year, setYear] = useState<"All" | number>("All"),
+    [query, setQuery] = useState("");
   const [activePaperId, setActivePaperId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const isNicl = examId === "nicl-ao";
-  const catalogue = isNicl ? niclPapers : previousPapers;
   const scoped = catalogue.filter(
     (paper) =>
       isNicl ||
@@ -97,17 +99,23 @@ function PaperArchiveContent({
         .includes(query.trim().toLowerCase()),
   );
   const activePaper = catalogue.find((paper) => paper.id === activePaperId);
-  const openPaper = (id: string | null) => {
-    setActivePaperId(id);
-    window.scrollTo({ top: 0, behavior: "auto" });
-  };
   const targetPapers = catalogue.filter(
-    (paper) => isNicl || paper.state === "Andhra Pradesh",
-  );
-  const questionCount = targetPapers.reduce(
+      (paper) => isNicl || paper.state === "Andhra Pradesh",
+    ),
+    availablePapers = targetPapers.filter((paper) => paper.paperUrl);
+  const questionCount = availablePapers.reduce(
     (sum, paper) => sum + (paper.questions ?? 0),
     0,
   );
+  const resetFilters = () => {
+    setStage("All");
+    setYear("All");
+    setQuery("");
+  };
+  const openPaper = (id: string | null) => {
+    setActivePaperId(id);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
   if (activePaper)
     return (
       <PaperCompanion
@@ -119,130 +127,149 @@ function PaperArchiveContent({
       />
     );
   return (
-    <>
-      <div className="page-head pyq-page-head">
-        <div>
-          <span className="eyebrow">
-            {isNicl ? "NICL AO" : "AP SI"} · Paper archive
-          </span>
-          <h1>Train with the paper. Keep the difficulty.</h1>
-          <p>
-            {isNicl
-              ? "Complete publisher reconstructions, clearly labelled as memory-based. Record answers and practise with separate section timers."
-              : "Complete original scans, original question order and booklet-specific keys. Practice questions are never substituted for a previous-year paper."}
-          </p>
-        </div>
-        <a
-          className="secondary-button"
-          href={
-            isNicl
-              ? "https://nationalinsurance.nic.co.in/recruitment"
-              : "https://slprb.ap.gov.in/"
-          }
-          target="_blank"
-          rel="noreferrer"
-        >
-          <ExternalLink size={16} /> Recruitment board
-        </a>
-      </div>
-      <section className="pyq-summary" aria-label="Paper library summary">
-        <div>
-          <strong>{targetPapers.length}</strong>
-          <span>archive records</span>
-          <small>
-            {isNicl ? "Publisher reconstructions" : "Papers and surviving keys"}
-          </small>
-        </div>
-        <div>
-          <strong>{questionCount.toLocaleString("en-IN")}</strong>
-          <span>questions in source papers</span>
-          <small>Complete papers, without simplifying</small>
-        </div>
-        <div>
-          <strong>
-            {targetPapers.filter((paper) => paperAnswerKeys[paper.id]).length}
-          </strong>
-          <span>matched answer sheets</span>
-          <small>Key provenance shown in each attempt</small>
-        </div>
-        <div>
-          <strong>
-            {
-              targetPapers.filter(
-                (paper) => paper.paperUrl && paper.questions && paper.minutes,
-              ).length
+    <div className="paper-library">
+      <PageHead
+        eyebrow={`${isNicl ? "NICL AO" : "AP SI"} / PREVIOUS PAPERS`}
+        title="Pick a year. Practise the whole paper."
+        copy={
+          isNicl
+            ? "Previous NICL AO papers reconstructed by publishers, with each complete question set kept together."
+            : "Original AP SI scans, source links and booklet-specific answer sheets in one place."
+        }
+        action={
+          <a
+            className="secondary-button"
+            href={
+              isNicl
+                ? "https://nationalinsurance.nic.co.in/recruitment"
+                : "https://slprb.ap.gov.in/"
             }
-          </strong>
-          <span>timed paper companions</span>
-          <small>Saved answers and absolute deadlines</small>
-        </div>
-      </section>
-      <section className="archive-callout">
+            target="_blank"
+            rel="noreferrer"
+          >
+            <ExternalLink size={16} /> Official recruitment page
+          </a>
+        }
+      />
+      <section
+        className="paper-library-stats"
+        aria-label="Paper library summary"
+      >
         <div>
-          <ShieldCheck size={22} />
+          <span className="paper-stat-icon">
+            <FileText size={20} />
+          </span>
+          <div>
+            <strong>{availablePapers.length}</strong>
+            <span>
+              {isNicl ? "Previous exam papers" : "Question-paper scans"}
+            </span>
+            <small>
+              {isNicl
+                ? "Publisher memory-based reconstructions"
+                : `${targetPapers.length} archive records, including surviving keys`}
+            </small>
+          </div>
+        </div>
+        <div>
+          <span className="paper-stat-icon">
+            <BookOpenCheck size={20} />
+          </span>
+          <div>
+            <strong>{questionCount.toLocaleString("en-IN")}</strong>
+            <span>Questions across source papers</span>
+            <small>Complete sets kept at their source difficulty</small>
+          </div>
+        </div>
+        <div>
+          <span className="paper-stat-icon">
+            <FileKey2 size={20} />
+          </span>
           <div>
             <strong>
-              {isNicl
-                ? "Memory-based means reconstructed"
-                : "Original papers, honest coverage"}
+              {targetPapers.filter((paper) => paperAnswerKeys[paper.id]).length}
             </strong>
-            <p>
-              {isNicl
-                ? "These are publisher reconstructions, not NICL-released booklets or official keys. Solutions are visible inside the source PDFs. Use full simulations in Tests for a closed-answer exam experience."
-                : "Source PDFs remain intact. A score appears only when the exact booklet key is available. Other scans have timed answer sheets for manual review, without an invented score."}
-            </p>
+            <span>Papers with matched scoring keys</span>
+            <small>Other papers support manual review</small>
           </div>
         </div>
       </section>
-      <div className="pyq-controls">
-        {!isNicl && (
-          <div className="scope-tabs" aria-label="Paper source">
-            <button
-              className={scope === "Target exam" ? "active" : ""}
-              onClick={() => {
-                setScope("Target exam");
-                setStage(stageName(initialStage));
-                setYear("All");
-              }}
-            >
-              Andhra Pradesh
-            </button>
-            <button
-              className={scope === "Other states" ? "active" : ""}
-              onClick={() => {
-                setScope("Other states");
-                setStage("Other-state");
-                setYear("All");
-              }}
-            >
-              Other-state SI
-            </button>
-          </div>
+      <section className="paper-library-note" aria-label="About paper sources">
+        <ShieldCheck size={21} />
+        <div>
+          <strong>
+            {isNicl
+              ? "A quick note about NICL papers"
+              : "Know exactly what you are practising"}
+          </strong>
+          <p>
+            {isNicl
+              ? "These are memory-based reconstructions, not official NICL booklets. Publisher solutions are visible in the PDFs."
+              : "Source scans stay intact. Automatic scores are available only when the matching booklet key has been verified."}
+          </p>
+        </div>
+        {onTests && (
+          <button className="text-button" onClick={onTests}>
+            Try an exam simulation <ArrowRight size={16} />
+          </button>
         )}
-        <div className="pyq-filter-row">
-          <label className="search-box">
-            <Search size={17} />
-            <input
-              ref={searchRef}
-              aria-label="Search papers"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search year, paper or subject"
-            />
-            {query && (
+      </section>
+      <section
+        className="paper-filter-panel"
+        aria-label="Filter previous papers"
+      >
+        {!isNicl && (
+          <div className="paper-scope-tabs" aria-label="Paper source">
+            {(["Target exam", "Other states"] as const).map((value) => (
               <button
-                type="button"
-                aria-label="Clear paper search"
+                key={value}
+                aria-pressed={scope === value}
+                className={scope === value ? "active" : ""}
                 onClick={() => {
-                  setQuery("");
-                  searchRef.current?.focus();
+                  setScope(value);
+                  setStage(
+                    value === "Other states"
+                      ? "Other-state"
+                      : stageName(initialStage),
+                  );
+                  setYear("All");
                 }}
               >
-                <X size={15} />
+                {value === "Target exam"
+                  ? "AP SI papers"
+                  : "Other-state SI papers"}
               </button>
-            )}
+            ))}
+          </div>
+        )}
+        <div className="paper-filter-grid">
+          <label className="paper-search-field">
+            <span>Search papers</span>
+            <div className="search-box">
+              <Search size={18} />
+              <input
+                ref={searchRef}
+                aria-label="Search papers"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Year, paper or subject…"
+              />
+              {query && (
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="Clear paper search"
+                  onClick={() => {
+                    setQuery("");
+                    searchRef.current?.focus();
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </label>
-          <label className="archive-select">
+          <label className="paper-filter-select">
             <span>Stage</span>
             <select
               value={stage}
@@ -250,23 +277,13 @@ function PaperArchiveContent({
                 setStage(event.target.value as "All" | PaperStage)
               }
             >
-              {(
-                [
-                  "All",
-                  "Prelims",
-                  "Final written",
-                  ...(!isNicl ? ["Other-state"] : []),
-                ] as Array<"All" | PaperStage>
-              ).map((option) => (
-                <option key={option} value={option}>
-                  {option === "Final written"
-                    ? "Mains / final written"
-                    : option}
-                </option>
-              ))}
+              <option value="All">All stages</option>
+              <option value="Prelims">Prelims</option>
+              <option value="Final written">Mains / final written</option>
+              {!isNicl && <option value="Other-state">Other-state SI</option>}
             </select>
           </label>
-          <label className="archive-select">
+          <label className="paper-filter-select">
             <span>Year</span>
             <select
               value={year}
@@ -278,151 +295,159 @@ function PaperArchiveContent({
                 )
               }
             >
-              <option>All</option>
-              {years.map((item) => (
-                <option key={item}>{item}</option>
+              <option value="All">All years</option>
+              {years.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
               ))}
             </select>
           </label>
         </div>
-      </div>
-      <div className="catalog-heading">
+        {(query || stage !== "All" || year !== "All") && (
+          <button
+            className="text-button paper-clear-filters"
+            onClick={resetFilters}
+          >
+            Clear filters <X size={13} />
+          </button>
+        )}
+      </section>
+      <div className="paper-library-heading">
         <div>
           <span className="eyebrow">
             {isNicl
-              ? "NICL AO · Common Prelims"
+              ? "NICL AO · COMMON PRELIMS"
               : scope === "Target exam"
-                ? "Andhra Pradesh"
-                : "Extra practice"}
+                ? "ANDHRA PRADESH"
+                : "EXTRA SI PRACTICE"}
           </span>
-          <h2>
-            {isNicl
-              ? "Memory-based paper catalogue"
-              : "Original paper catalogue"}
-          </h2>
+          <h2>Choose a previous paper</h2>
         </div>
-        <span role="status">{filtered.length} records shown</span>
+        <span role="status">
+          {filtered.length} {isNicl ? "papers" : "archive items"} shown
+        </span>
       </div>
-      <div className="pyq-catalog">
-        {filtered.map((paper) => (
-          <article className="pyq-card" key={paper.id}>
-            <div className="paper-card-top">
-              <span className="paper-year">{paper.year}</span>
-              <div className="paper-badges">
-                <em className={`provenance-badge ${statusClass[paper.status]}`}>
-                  {paper.status === "Official" && <Check size={11} />}{" "}
+      <div className="paper-library-grid">
+        {filtered.map((paper) => {
+          const saved = progress[paper.id],
+            key = paperAnswerKeys[paper.id],
+            timed = Boolean(paper.paperUrl && paper.questions && paper.minutes);
+          return (
+            <article className="paper-library-card" key={paper.id}>
+              <div className="paper-library-card-top">
+                <span className="paper-library-year">{paper.year}</span>
+                <span
+                  className={`badge paper-source-badge ${statusClass[paper.status]}`}
+                >
+                  {paper.status === "Official" && <Check size={12} />}{" "}
                   {paper.status}
-                </em>
-                {progress[paper.id]?.startedAt && (
-                  <em className="reader-badge">
-                    {progress[paper.id]?.submitted
-                      ? "Completed"
-                      : "In progress"}
-                  </em>
+                </span>
+              </div>
+              <span className="paper-library-stage">
+                {paper.stage === "Final written"
+                  ? "Mains / final written"
+                  : paper.stage}{" "}
+                · {paper.paper}
+                {paper.booklet ? ` · Booklet ${paper.booklet}` : ""}
+              </span>
+              <h3>{paper.title}</h3>
+              <p className="paper-library-subject">{paper.subject}</p>
+              <div className="paper-library-facts">
+                {paper.questions && (
+                  <span>
+                    <FileText size={15} />
+                    {paper.questions} questions
+                  </span>
+                )}
+                {paper.minutes && (
+                  <span>
+                    <Clock3 size={15} />
+                    {paper.minutes} minutes
+                  </span>
+                )}
+                <span>{paper.languages.join(" + ")}</span>
+                {paper.examDate && <span>{paper.examDate}</span>}
+              </div>
+              <div className="paper-library-scoring">
+                <ShieldCheck size={16} />
+                <span>
+                  <strong>
+                    {key
+                      ? "Scored answer sheet available"
+                      : timed
+                        ? "Timed answer sheet · manual review"
+                        : "Source reference"}
+                  </strong>
+                  {key
+                    ? "Matched to this source’s question order."
+                    : timed
+                      ? "The matching automatic scoring key is not available."
+                      : "Open the source for the available paper or key."}
+                </span>
+                {saved?.startedAt && (
+                  <span
+                    className={`badge ${saved.submitted ? "correct" : "blue"}`}
+                  >
+                    {saved.submitted ? "Completed" : "In progress"}
+                  </span>
                 )}
               </div>
-            </div>
-            <span className="paper-kicker">
-              {paper.stage === "Final written"
-                ? "Mains / final written"
-                : paper.stage}{" "}
-              · {paper.paper}
-              {paper.booklet ? ` · Booklet ${paper.booklet}` : ""}
-            </span>
-            <h3>{paper.title}</h3>
-            <p className="paper-subject">{paper.subject}</p>
-            <div className="paper-facts">
-              {paper.questions && (
-                <span>
-                  <FileText size={14} />
-                  {paper.questions} questions
-                </span>
-              )}
-              {paper.minutes && (
-                <span>
-                  <Clock3 size={14} />
-                  {paper.minutes} minutes
-                </span>
-              )}
-              <span>{paper.languages.join(" + ")}</span>
-              {paper.examDate && <span>{paper.examDate}</span>}
-            </div>
-            {paper.note && <p className="paper-note">{paper.note}</p>}
-            <div className="paper-actions">
-              {paper.paperUrl && paper.questions && paper.minutes && (
-                <button
-                  className="primary-button compact"
-                  onClick={() => openPaper(paper.id)}
-                >
-                  <BookOpenCheck size={15} />
-                  {progress[paper.id]?.submitted
-                    ? "Review attempt"
-                    : progress[paper.id]?.startedAt
-                      ? "Resume paper"
-                      : "Attempt paper"}
-                </button>
-              )}
-              {paper.paperUrl && (
-                <a
-                  className="secondary-button compact"
-                  href={paper.paperUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <FileText size={15} /> Source PDF
-                </a>
-              )}
-              {paper.answerKeyUrl && (
-                <a
-                  className="secondary-button compact"
-                  href={paper.answerKeyUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <FileKey2 size={15} />
-                  {paper.status === "Memory-based"
-                    ? "Publisher solutions"
-                    : "Answer key"}
-                </a>
-              )}
-              {paper.sourceUrl && (
-                <a
-                  className="paper-source-link"
-                  href={paper.sourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Source <ExternalLink size={13} />
-                </a>
-              )}
-            </div>
-            <div className="reader-progress">
-              <BookOpenCheck size={16} />
-              <span>
-                {paperAnswerKeys[paper.id] ? (
-                  <>
-                    <strong>Matched key available</strong>{" "}
-                    {paperAnswerKeys[paper.id].label}
-                  </>
-                ) : paper.paperUrl && paper.questions && paper.minutes ? (
-                  <>
-                    <strong>Timed answer sheet</strong> Manual review; automatic
-                    score unavailable.
-                  </>
-                ) : (
-                  <>
-                    <strong>Archive reference</strong> Full booklet or timing
-                    not verified for interactive use.
-                  </>
+              <div className="paper-library-actions">
+                {timed && (
+                  <button
+                    className="primary-button"
+                    onClick={() => openPaper(paper.id)}
+                  >
+                    <PlayPaperIcon />
+                    {saved?.submitted
+                      ? "Review attempt"
+                      : saved?.startedAt
+                        ? "Resume paper"
+                        : "Attempt paper"}
+                  </button>
                 )}
-              </span>
-            </div>
-          </article>
-        ))}
+                {paper.paperUrl && (
+                  <a
+                    className="secondary-button"
+                    href={paper.paperUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <FileText size={15} /> Source PDF
+                  </a>
+                )}
+                {paper.answerKeyUrl && (
+                  <a
+                    className="text-button"
+                    href={paper.answerKeyUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <FileKey2 size={15} />
+                    {paper.status === "Memory-based"
+                      ? "Publisher solutions"
+                      : "Answer key"}
+                  </a>
+                )}
+              </div>
+              <details className="paper-source-details">
+                <summary>Source details</summary>
+                {paper.note && <p>{paper.note}</p>}
+                {paper.sourceUrl && (
+                  <a href={paper.sourceUrl} target="_blank" rel="noreferrer">
+                    View source page <ExternalLink size={13} />
+                  </a>
+                )}
+                {key && <p>{key.label}</p>}
+              </details>
+            </article>
+          );
+        })}
       </div>
       {!filtered.length && (
-        <div className="empty-state compact-empty">
-          <FileText size={28} />
+        <div className="empty-state">
+          <FileText size={30} />
           <h2>
             {isNicl && stage === "Final written"
               ? "No verified NICL Mains paper located yet."
@@ -430,38 +455,44 @@ function PaperArchiveContent({
           </h2>
           <p>
             {isNicl && stage === "Final written"
-              ? "Use Mains simulations for your selected stream. Newly written questions and another insurer’s papers are never labelled NICL PYQs."
-              : "Try another year, clear the search or change the stage."}
+              ? "Use the Mains test series for your selected stream. Other insurers’ papers are never labelled as NICL PYQs."
+              : "Try another year or stage, or clear the search."}
           </p>
-          <button
-            className="secondary-button"
-            onClick={() => {
-              setStage("All");
-              setYear("All");
-              setQuery("");
-            }}
-          >
+          <button className="secondary-button" onClick={resetFilters}>
             Show all papers
           </button>
         </div>
       )}
-      <div className="citation-guide">
-        <span>PROVENANCE</span>
-        <div>
-          <em className="official">Official</em> Government-hosted
-        </div>
-        <div>
-          <em className="mirror">Verified mirror</em> Board-paper scan
-        </div>
-        <div>
-          <em className="community">Community scan</em> Community-hosted
-        </div>
-        <div>
-          <em className="memory">Memory-based</em> Publisher reconstruction
-        </div>
-      </div>
-    </>
+      <details className="paper-provenance-guide">
+        <summary>
+          <ShieldCheck size={17} /> How paper sources are labelled
+        </summary>
+        <dl>
+          <div>
+            <dt>Official</dt>
+            <dd>A government-hosted paper or key.</dd>
+          </div>
+          <div>
+            <dt>Verified mirror</dt>
+            <dd>A board-paper scan hosted by another source.</dd>
+          </div>
+          <div>
+            <dt>Community scan</dt>
+            <dd>A scan hosted by the community.</dd>
+          </div>
+          <div>
+            <dt>Memory-based</dt>
+            <dd>
+              A publisher reconstruction; wording and keys are not NICL-issued.
+            </dd>
+          </div>
+        </dl>
+      </details>
+    </div>
   );
+}
+function PlayPaperIcon() {
+  return <BookOpenCheck size={16} />;
 }
 
 function PaperCompanion({
@@ -483,6 +514,7 @@ function PaperCompanion({
   const autoSubmittedFor = useRef<number | null>(null);
   const {
     nicl,
+    sectionalTiming,
     count,
     key,
     started,
@@ -602,12 +634,16 @@ function PaperCompanion({
             <div>
               <strong>
                 {paper.minutes}-minute timed attempt
-                {nicl ? " · 3 separately timed sections" : ""}
+                {sectionalTiming
+                  ? " · 3 separately timed sections"
+                  : nicl
+                    ? " · One composite timer"
+                    : ""}
               </strong>
               <p>
                 The timer continues when you leave or reload. Answers save
                 automatically.
-                {nicl
+                {sectionalTiming
                   ? " Each section closes after 20 minutes; only the current section can be answered."
                   : ""}
               </p>
@@ -622,7 +658,7 @@ function PaperCompanion({
         <div className="paper-reader-notice" role="status">
           <Clock3 size={18} />
           <strong>
-            {nicl
+            {sectionalTiming
               ? `${["English", "Reasoning", "Quantitative aptitude"][sectionIndex]} · ${timeText(sectionRemaining)} left in section`
               : `${timeText(remaining)} remaining`}
           </strong>
