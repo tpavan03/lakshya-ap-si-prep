@@ -1,0 +1,7 @@
+.env*
+tests
+test-results
+playwright-report
+android
+docs
+.github

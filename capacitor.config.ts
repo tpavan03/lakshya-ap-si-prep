@@ -2,11 +2,11 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.tpavan.lakshya',
-  appName: 'Lakshya AP SI Prep',
+  appName: 'Exam Prep King',
   webDir: 'dist',
   android: {
     allowMixedContent: false,
-    backgroundColor: '#142b38',
+    backgroundColor: '#152445',
   },
 }
 

@@ -1,0 +1,55 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Check cloud configuration
+        shell: bash
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo '::error::Set repository variables VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY so the APK uses the existing backend.'
+            exit 1
+          fi
+      - name: Restore persistent debug signing key
+        shell: bash
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
+            echo '::error::Set ANDROID_DEBUG_KEYSTORE_BASE64 to keep APK signatures consistent between builds.'
+            exit 1
+          fi
+          umask 077
+          mkdir -p "$HOME/.android"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run android:apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exam-prep-king-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

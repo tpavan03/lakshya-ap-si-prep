@@ -1,80 +1,70 @@
-<div align="center">
-  <img src="public/lakshya-banner.svg" alt="Lakshya AP SI Prep Desk" width="100%" />
-</div>
+# Exam Prep King
 
-<p align="center">
-  <a href="https://lakshya-ap-si-prep.vercel.app"><strong>Open the live preparation desk →</strong></a>
-  ·
-  <a href="https://github.com/tpavan03/lakshya-ap-si-prep/releases/latest"><strong>Download the Android APK →</strong></a>
-</p>
+A preparation desk for **AP Police SI** and **NICL AO Generalist / Information Technology Specialist**, built with React, TypeScript, Vite, Capacitor and the existing Supabase backend.
 
-# Lakshya · AP SI Prep Desk
+[Open the app](https://lakshya-ap-si-prep.vercel.app) · [Android releases](https://github.com/tpavan03/lakshya-ap-si-prep/releases)
 
-A focused, local-first preparation workspace for the Andhra Pradesh Police Sub Inspector examination. Lakshya turns the official syllabus into a daily workflow: learn a concept, solve timed questions, review errors, and measure readiness.
+## Preparation routes
 
-## What is inside
+- AP SI Civil: separate 100-question / 180-minute Prelims papers and 200-question / 180-minute Mains objective papers, plus language writing practice.
+- NICL common Prelims: English 30, Reasoning 35, Quant 35; 20 minutes per section.
+- NICL Generalist Mains: five 50-question sections, 180 minutes total.
+- NICL IT Mains: five common 40-question sections plus 50 professional IT questions, using the specialist section timings.
+- NICL objective marking: +1 correct, −0.25 wrong, 0 unanswered. Descriptive English is a separate 30-minute qualifying practice desk with essay, précis and comprehension.
+- Thirty reproducible editions per paper, strict full-paper coverage, hard-weighted and topic-diverse selection, resume across reloads, review flags, absolute section deadlines, detailed post-test answers and subject reports.
+- Custom practice by subjects, topic, difficulty, count and time, including saved questions and mistakes.
 
-- Official 2026 exam profile with direct SLPRB notification access
-- Seven complete theory chapters with concepts, formulae or rules, worked examples, traps, revision notes and trusted sources
-- 4,631 original practice questions with hints, worked explanations, difficulty, and target time
-- 2,805 hard questions organised into topic challenges with strict combined timers
-- Paper-level AP archive with direct paper/key links, stage filters, provenance labels, and review status
-- Persistent split-screen attempt mode for the verified 2018 Prelims Paper I Booklet C scan and its 100-entry official key
-- Official Kerala and Rajasthan SI papers with answer keys for topic-wise training
-- Filters for subject, topic, difficulty and text search, with progressive loading for fast mobile use
-- 50 deterministic, hard-heavy mock-test blueprints: 40 sectionals and 10 full 100-question simulations
-- Full-screen timer, question palette, answer state, hints, and review flags
-- Daily activity, streak, accuracy, subject diagnosis, and category-aware readiness
-- Browser persistence plus JSON export/import for backups
+Patterns are sourced from the 2026 notifications in [exam sources](docs/exam-sources.md). Simulations contain **editorially authored practice**, not historical questions. AP Civil weighting is explicit; AR merit weighting differs. No fabricated ranks, cutoffs or exam dates are shown.
 
-## Current content status
+## Content and original papers
 
-The current release contains 4,631 unique, original questions, including 2,805 hard items across Arithmetic, Reasoning, General Studies, AP Focus and English. This is more than eleven times the former 411-question library. Hard Practice groups them by topic and derives each challenge timer from the editorial solve-time targets. Every mock selects hard questions first, fills the remaining blueprint with medium and foundation checks, and avoids repetition inside that attempt. Each numbered mock remains reproducible on retry; questions may reappear across different numbered mocks so performance can be compared against a stable editorial bank.
+The existing AP library has 4,631 questions. NICL adds 627 original questions across quantitative aptitude, reasoning, English, general awareness, computer knowledge and IT professional knowledge, plus seven study chapters. Parameterized question families are disclosed; those variants are not different historical papers.
 
-The Learn section contains a complete chapter for every syllabus group: 82 concept notes, 33 formula or rule cards, 18 worked examples, 42 common traps, 42 rapid-revision points and 27 source links. Each chapter leads directly into its matching filtered practice bank.
+The archive retains 24 SI records and adds two NICL publisher reconstructions. Three AP original scans have matched booklet-specific keys, including the amended dual answer for 2023 Paper II Q95. NICL 2024/2025 papers are explicitly **memory-based**, use publisher keys, and retain visible source solutions. Other original scans have timed manual answer sheets when timing is verified; no score is invented without a matching key. See [paper provenance](docs/paper-provenance.md).
 
-The PYQ catalogue currently indexes 16 AP archive records: 13 retrievable question-paper records and three older key-only records covering the surviving 2008(2), 2011, 2016, 2018 and 2023 material. The 2016, 2018 and 2023 prelims and final-written objective papers represent 1,800 questions; the 2011 community scan raises visible paper coverage to about 2,000 questions. Eight government-hosted Kerala and Rajasthan papers provide additional practice. The first interactive companion covers the full 2018 Prelims Paper I Booklet C: the 100-option key was transcribed from the APSLPRB key and cross-checked 100/100 against a separate solved copy. Its answer state and last question are stored with the rest of the user profile.
-
-Lakshya does not claim a complete 20–25 year official AP SI archive because one could not be verified and AP SI recruitment was not conducted every year. The catalogue counts distinct papers rather than Set A/B/C/D reorderings. It distinguishes official sources, verified mirrors, community scans and surviving answer-key records. PDFs remain linked to their source; interactive imports are released only after question order, options and booklet-specific keys are checked. Commercial books such as R.S. Aggarwal are linked as references and are not copied.
-
-## Run locally
+## Local development and checks
 
 ```bash
-npm install
+npm ci
+cp .env.example .env.local
 npm run dev
 ```
 
-Production checks:
+Configure the same existing Supabase URL and publishable key in `.env.local`. Without configuration, the app runs locally; with configuration, signed-out users can also choose **Explore on this device**. Never place a service-role key in the browser.
 
 ```bash
 npm run lint
+npm test
+npm run validate:bank
+npm run validate:papers
+npm run test:e2e
 npm run build
 ```
 
-## Android app
+Browser tests expect the dev server at `http://127.0.0.1:5173` and Chrome at `/opt/google/chrome/chrome`; override `APP_URL` and `CHROME_BIN` as needed. They cover exact section locks, reload recovery, submission, legacy migration, writing drafts, mobile layout and axe accessibility checks. DESIGN.md and UX-CONTRACT.md record the shared design and behavior.
 
-Download the current APK from [GitHub Releases](https://github.com/tpavan03/lakshya-ap-si-prep/releases/latest). Android may ask you to allow installs from your browser or file manager the first time you sideload it.
+## Progress and existing backend
 
-To rebuild the APK, install Android Studio or the Android SDK plus JDK 21, then run:
+The established `apsi-command:v1` local key and Supabase `user_state` table remain in use. Legacy AP data migrates into the AP exam; NICL progress is separate and attempts record Generalist/IT stream identity. Existing rows need no migration. Sign-in keeps per-account ownership, blocks uploads before hydration and serializes writes. JSON backups include both exams; old Lakshya backups remain importable.
+
+Writing drafts and active tests stay on the device. Account-scoped writing drafts prevent another signed-in candidate seeing them. Export before clearing browser data.
+
+**Deployment verification on 28 October 2026:** both the configured exam backend hostname and the separately hosted Saapadu backend hostname returned NXDOMAIN. This release preserves the existing connection; live authenticated persistence cannot be certified until the Supabase projects are restored or the settings are corrected. Local preparation remains available. Restoring the endpoint does not require a database redesign. After restoration, verify `/auth/v1/health`, the configured Google provider, per-user read/write isolation and cross-device reload.
+
+## Android
 
 ```bash
 npm run android:apk
 ```
 
-The generated file is `android/app/build/outputs/apk/debug/app-debug.apk`. Google login returns to the app through the `com.tpavan.lakshya://login-callback` deep link. Add that exact URL to **Supabase → Authentication → URL Configuration → Redirect URLs** for native sign-in.
+Requires JDK 21, Android SDK/platform 35 and accepted SDK licenses. Output: `android/app/build/outputs/apk/debug/app-debug.apk`. Package `com.tpavan.lakshya` and OAuth callback `com.tpavan.lakshya://login-callback` are preserved. Keep that callback in Supabase’s redirect allowlist.
 
-## Storage and future sync
+Version 2.0.0 uses a persistent debug signing key. The earlier published APK was signed elsewhere and its private key was unavailable here: export your existing progress before uninstalling the old APK and installing this build. New builds signed with the persisted key can update this version.
 
-Progress is stored in `localStorage` under `apsi-command:v1`. Use **Profile → Export JSON** for a portable backup. When Supabase environment variables are present, email magic-link or Google login automatically syncs the same state into an RLS-protected per-user row. Each Google account receives its own isolated progress record, shared between the website and Android app. Run [`supabase/migrations/001_user_state.sql`](supabase/migrations/001_user_state.sql) in the project SQL editor before enabling cloud sync.
+The GitHub Android workflow uses repository variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, and secret `ANDROID_DEBUG_KEYSTORE_BASE64`. It runs manually or on version tags and uploads the APK as a build artifact.
 
-## Source policy
+## Existing Vercel project
 
-The current exam profile links to the [official APSLPRB 2026 notification](https://slprb.ap.gov.in/2026_PDFS/SLPRB_AP_SI_Notification_2026.pdf). Foundation resources link to NCERT, the Legislative Department, RBI, NDMA, AP Government, and other primary sources. Every imported paper should carry its exam, year, state, source URL, verification status, and rights status.
+Deployment targets the existing `lakshya-ap-si-prep` project and production domain. No replacement frontend or Supabase database is created. Direct deployment uses `npx vercel --prod --yes` from the linked checkout.
 
-## Technology
-
-React 19 · TypeScript · Vite · Capacitor · Supabase · Lucide · CSS · Vercel
-
----
-
-This is an independent preparation tool and is not affiliated with APSLPRB. Candidates should rely on the official board notice for recruitment rules and amendments.
+Automatic deployment from GitHub additionally requires the `tpavan03` GitHub Login Connection in Vercel Account Settings → Authentication. Without it, `vercel git connect` returns a 400 and GitHub pushes alone do not redeploy. After connecting, link `tpavan03/lakshya-ap-si-prep` in the existing Vercel project’s Git settings.

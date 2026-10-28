@@ -1,7 +1,7 @@
 {
-  "name": "ap-si-prep",
+  "name": "exam-prep-king",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,9 @@
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "lint": "oxlint",
     "validate:bank": "tsx scripts/validate-question-bank.ts",
+    "validate:papers": "tsx scripts/validate-pyq-catalog.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "test:e2e": "playwright test tests/app.spec.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,6 +26,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@capacitor/cli": "7.6.9",
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.13.3",

@@ -1,452 +1,829 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, ArrowRight, BarChart3, BookOpen, Brain, CalendarDays, Check, ChevronDown, ChevronRight, CircleHelp, Clock3, Download, ExternalLink, FileCheck2, FileText, Flame, Gauge, History, LayoutDashboard, LogOut, Mail, Menu, Play, Search, ShieldCheck, Sparkles, Target, TimerReset, TrendingUp, Upload, X, Zap } from 'lucide-react'
-import { mockSeries, questions, topics, type Question, type Subject } from './data'
-import { examProfile, readinessBenchmarks } from './exam'
-import { useCloudSync } from './hooks/useCloudSync'
-import { PaperArchive, type PaperAttemptProgress } from './components/PaperArchive'
-import { theoryByTopicId, type TheoryChapter } from './theory'
-import './App.css'
-import './cloud.css'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import {
+  ArrowRight,
+  BookOpen,
+  Brain,
+  ChartNoAxesCombined,
+  ChevronRight,
+  Crown,
+  Download,
+  ExternalLink,
+  FileCheck2,
+  GraduationCap,
+  History,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Settings2,
+  ShieldCheck,
+  Upload,
+  X,
+  Clock3,
+} from "lucide-react";
+import { questions } from "./data";
+import { niclQuestions } from "./questions/nicl";
+import { useCloudSync } from "./hooks/useCloudSync";
+import { PaperArchive } from "./components/PaperArchive";
+import { Dialog } from "./components/ui";
+import { TestRunner, AttemptReport } from "./components/TestRunner";
+import {
+  Dashboard,
+  Tests,
+  Practice,
+  Learn,
+  Performance,
+} from "./components/ExamPages";
+import {
+  EXAMS,
+  createPracticeQuiz,
+  startQuiz,
+  type ExamId,
+  type Stage,
+  type Stream,
+  type Quiz,
+  type Attempt,
+} from "./lib/examEngine";
+import {
+  loadStore,
+  normalizeStore,
+  saveAttempt,
+  createDefaultStore,
+  STORAGE_KEY,
+  ACTIVE_QUIZ_KEY,
+  type Store,
+  type ExamProgress,
+} from "./lib/store";
+import "./App.css";
 
-type View = 'dashboard' | 'syllabus' | 'practice' | 'pyq' | 'mocks' | 'analysis'
-type Profile = { name: string; category: string; examDate: string; dailyMinutes: number }
-type Attempt = { id: string; title: string; date: string; score: number; total: number; seconds: number; subjects: Record<string, { correct: number; total: number }> }
-type Daily = { date: string; questions: number; correct: number; minutes: number }
-type Store = { profile: Profile; attempts: Attempt[]; daily: Daily[]; saved: string[]; pyqProgress?: Record<string, PaperAttemptProgress>; version: number }
-type Quiz = { title: string; items: Question[]; minutes: number; startedAt?: number; expiresAt?: number; index?: number; answers?: Record<string,number>; marked?: string[] }
+export type View =
+  "dashboard" | "tests" | "practice" | "papers" | "learn" | "reports";
+const navigation = [
+  { id: "dashboard", label: "Study desk", icon: LayoutDashboard },
+  { id: "tests", label: "Test series", icon: FileCheck2 },
+  { id: "practice", label: "Custom practice", icon: Brain },
+  { id: "papers", label: "Previous papers", icon: History },
+  { id: "learn", label: "Learn & revise", icon: BookOpen },
+  { id: "reports", label: "Performance", icon: ChartNoAxesCombined },
+] as const;
+const params = new URLSearchParams(window.location.search);
+const readQuiz = (): Quiz | null => {
+  try {
+    const q = JSON.parse(localStorage.getItem(ACTIVE_QUIZ_KEY) ?? "null");
+    return q?.id &&
+      Array.isArray(q.items) &&
+      q.items.length &&
+      q.sections?.length
+      ? q
+      : null;
+  } catch {
+    return null;
+  }
+};
 
-const STORAGE_KEY = 'apsi-command:v1'
-const ACTIVE_QUIZ_KEY = 'apsi-command:active-quiz'
-const todayKey = () => new Date().toLocaleDateString('en-CA')
-const defaultStore: Store = { profile: { name: 'Aspirant', category: 'OC / EWS', examDate: '2027-02-15', dailyMinutes: 120 }, attempts: [], daily: [], saved: [], pyqProgress: {}, version: 2 }
-const loadStore = (): Store => { try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? { ...defaultStore, ...JSON.parse(raw) } : defaultStore } catch { return defaultStore } }
-const nav: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'dashboard', label: 'Command centre', icon: LayoutDashboard }, { id: 'syllabus', label: 'Learn the syllabus', icon: BookOpen },
-  { id: 'practice', label: 'Topic practice', icon: Brain }, { id: 'pyq', label: 'Paper archive', icon: History },
-  { id: 'mocks', label: 'Mock series', icon: FileCheck2 }, { id: 'analysis', label: 'Readiness', icon: BarChart3 },
-]
-const seeded = <T,>(items: T[], seed: number) => { const copy = [...items]; let value = seed + 1; for (let i = copy.length - 1; i > 0; i--) { value = (value * 9301 + 49297) % 233280; const j = Math.floor((value / 233280) * (i + 1)); [copy[i], copy[j]] = [copy[j], copy[i]] } return copy }
-
-function App() {
-  const [view, setView] = useState<View>('dashboard'), [store, setStore] = useState<Store>(loadStore)
-  const [profileOpen, setProfileOpen] = useState(false), [mobileOpen, setMobileOpen] = useState(false), [quiz, setQuiz] = useState<Quiz | null>(()=>{try{const raw=localStorage.getItem(ACTIVE_QUIZ_KEY);return raw?JSON.parse(raw):null}catch{return null}})
-  const cloud = useCloudSync(store, setStore)
-  useEffect(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(store)), [store])
-  const beginQuiz=(next:Quiz)=>{const now=Date.now(),active={...next,startedAt:now,expiresAt:now+next.minutes*60000};localStorage.setItem(ACTIVE_QUIZ_KEY,JSON.stringify(active));setQuiz(active)}
-  const closeQuiz=()=>{localStorage.removeItem(ACTIVE_QUIZ_KEY);setQuiz(null)}
-  const navigate = (next: View) => { setView(next); setMobileOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
-  const recordAttempt = (attempt: Attempt) => { const date = todayKey(); setStore(current => { const existing = current.daily.find(day => day.date === date); const daily = existing ? current.daily.map(day => day.date === date ? { ...day, questions: day.questions + attempt.total, correct: day.correct + attempt.score, minutes: day.minutes + Math.max(1, Math.round(attempt.seconds / 60)) } : day) : [...current.daily, { date, questions: attempt.total, correct: attempt.score, minutes: Math.max(1, Math.round(attempt.seconds / 60)) }]; return { ...current, attempts: [attempt, ...current.attempts], daily } }); closeQuiz(); setView('analysis') }
-  const signOut = async () => { await cloud.signOut(); localStorage.removeItem(ACTIVE_QUIZ_KEY); setQuiz(null); setStore(defaultStore); setProfileOpen(false); setView('dashboard') }
-  if (!cloud.authReady) return <AuthLoading />
-  if (cloud.cloudConfigured && !cloud.user) return <LoginScreen cloud={cloud} />
-  return <div className="app-shell">
-    <Sidebar active={view} onNavigate={navigate} open={mobileOpen} onClose={() => setMobileOpen(false)} />
-    <main className="main"><header className="topbar"><button className="icon-button mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu size={20}/></button><div className="official-strip"><span className="live-dot"/> 2026 cycle desk <span>•</span> Verified {new Date(examProfile.checkedOn).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</div><button className="profile-chip" onClick={() => setProfileOpen(true)}><span>{store.profile.name.slice(0,1).toUpperCase()}</span><div><strong>{store.profile.name}</strong><small>{store.profile.category}</small></div><ChevronDown size={15}/></button></header>
-      <div className="content">{view === 'dashboard' && <Dashboard store={store} onNavigate={navigate} onQuiz={beginQuiz}/>} {view === 'syllabus' && <Syllabus onPractice={subject => beginQuiz(makeQuiz(subject, 10))}/>} {view === 'practice' && <Practice saved={store.saved} setStore={setStore} onQuiz={beginQuiz}/>} {view === 'pyq' && <PaperArchive progress={store.pyqProgress ?? {}} onProgress={(paperId,value)=>setStore(current=>({...current,pyqProgress:{...(current.pyqProgress??{}),[paperId]:value}}))}/>} {view === 'mocks' && <Mocks attempts={store.attempts} onQuiz={beginQuiz}/>} {view === 'analysis' && <Analysis store={store} onNavigate={navigate}/>}</div>
-    </main>{profileOpen && <ProfilePanel store={store} setStore={setStore} cloud={cloud} onSignOut={signOut} onClose={() => setProfileOpen(false)}/>} {quiz && <QuizRunner quiz={quiz} onClose={closeQuiz} onSubmit={recordAttempt}/>} </div>
-}
-
-function AuthLoading() {
-  return <main className="auth-loading" aria-live="polite"><div className="auth-loading-mark"><ShieldCheck size={30}/></div><strong>LAKSHYA</strong><span>Restoring your preparation desk</span><i/></main>
-}
-
-function LoginScreen({ cloud }: { cloud: ReturnType<typeof useCloudSync<Store>> }) {
-  const [email, setEmail] = useState(''), [message, setMessage] = useState(''), [working, setWorking] = useState(false)
-  const googleLogin = async () => { setWorking(true); setMessage(''); const error = await cloud.signInWithGoogle(); if (error) { setMessage(error); setWorking(false) } }
-  const emailLogin = async () => { if (!email.trim()) { setMessage('Enter your email address first.'); return } setWorking(true); const error = await cloud.signInWithEmail(email.trim()); setMessage(error ?? 'Magic link sent. Check your inbox.'); setWorking(false) }
-  return <main className="auth-page"><section className="auth-story"><div className="auth-brand"><span><ShieldCheck size={23}/></span><div><strong>LAKSHYA</strong><small>AP SI PREP DESK</small></div></div><div className="auth-story-copy"><span className="auth-kicker">MISSION / 2026–27</span><h1>Your preparation.<br/><em>One continuous record.</em></h1><p>Return to the exact question, mock score and revision trail you left behind—on the web or Android.</p><div className="auth-proof"><div><strong>{questions.length.toLocaleString('en-IN')}</strong><span>practice questions</span></div><div><strong>50</strong><span>mock blueprints</span></div><div><strong>24</strong><span>sourced papers</span></div></div></div><footer><span>LOCAL-FIRST · CLOUD-SYNCED</span><p>Your account keeps each candidate's progress separate.</p></footer></section><section className="auth-entry"><div className="auth-card"><span className="eyebrow">Candidate access</span><h2>Continue your mission.</h2><p>Sign in to load your saved preparation history and keep every attempt backed up.</p><button className="auth-google" onClick={googleLogin} disabled={working}><span>G</span>{working?'Opening Google…':'Continue with Google'}</button><div className="auth-divider"><span>or use a magic link</span></div><label>Email address<div><Mail size={17}/><input type="email" autoComplete="email" value={email} onChange={event=>setEmail(event.target.value)} onKeyDown={event=>{if(event.key==='Enter')void emailLogin()}} placeholder="you@gmail.com"/></div></label><button className="auth-email" onClick={emailLogin} disabled={working}>Send magic link <ArrowRight size={16}/></button>{message&&<p className="auth-message" role="status">{message}</p>}<small className="auth-note"><ShieldCheck size={14}/> Your study history is stored under your own account.</small></div><p className="auth-official">Independent preparation tool · Always verify rules with APSLPRB</p></section></main>
-}
-
-function Sidebar({ active, onNavigate, open, onClose }: { active: View; onNavigate: (v: View) => void; open: boolean; onClose: () => void }) {
-  return <>{open && <button className="scrim" onClick={onClose} aria-label="Close menu"/>}<aside className={`sidebar ${open ? 'open' : ''}`}><div className="brand"><div className="brand-mark"><ShieldCheck size={23}/></div><div><strong>LAKSHYA</strong><small>AP SI PREP DESK</small></div></div><div className="cycle-label">MISSION / 2026–27</div><nav>{nav.map(item => <button key={item.id} className={active === item.id ? 'active' : ''} onClick={() => onNavigate(item.id)}><item.icon size={18}/><span>{item.label}</span>{active === item.id && <ChevronRight size={15}/>}</button>)}</nav><div className="sidebar-card"><span>OFFICIAL NOTICE</span><strong>SLPRB SI 2026</strong><p>Always check the board notice and amendments before applying.</p><a href="https://slprb.ap.gov.in/2026_PDFS/SLPRB_AP_SI_Notification_2026.pdf" target="_blank">Open notification <ExternalLink size={13}/></a></div><div className="sidebar-foot"><span>LOCAL-FIRST</span><p>Your study history stays in this browser. Export a backup weekly.</p></div></aside></>
-}
-function PageHead({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy: string; action?: React.ReactNode }) { return <div className="page-head"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{copy}</p></div>{action}</div> }
-
-function Dashboard({ store, onNavigate, onQuiz }: { store: Store; onNavigate: (v: View) => void; onQuiz: (q: Quiz) => void }) {
-  const [now] = useState(() => Date.now())
-  const days = Math.max(0, Math.ceil((new Date(store.profile.examDate).getTime() - now) / 86400000)), totalQ = store.daily.reduce((sum, day) => sum + day.questions, 0), totalCorrect = store.daily.reduce((sum, day) => sum + day.correct, 0), streak = calculateStreak(store.daily), activity = activityDays(store.daily)
-  return <><PageHead eyebrow="Command centre" title={`Ready, ${store.profile.name}?`} copy="One focused session today moves the entire preparation plan forward." action={<button className="secondary-button" onClick={() => onNavigate('analysis')}><Target size={17}/> View readiness</button>}/><section className="hero-panel"><div className="hero-copy"><span className="kicker"><Sparkles size={14}/> TODAY'S MISSION</span><h2>Build accuracy before speed.</h2><p>Complete a 10-question mixed diagnostic. Lakshya will use your result to identify the next topic to revise.</p><div className="hero-actions"><button className="primary-button" onClick={() => onQuiz(makeQuiz(undefined, 10))}><Play size={17} fill="currentColor"/> Start daily drill</button><button className="text-button" onClick={() => onNavigate('syllabus')}>Review concepts <ArrowRight size={15}/></button></div></div><div className="countdown"><small>TARGET DATE</small><strong>{days}</strong><span>days remaining</span><div className="countdown-line"><CalendarDays size={15}/>{new Date(store.profile.examDate).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div></div></section><div className="metric-grid"><Metric icon={Flame} value={String(streak)} label="day streak" note={streak ? 'Keep the chain alive' : 'Begin today'}/><Metric icon={Brain} value={String(totalQ)} label="questions solved" note={`${store.attempts.length} completed sets`}/><Metric icon={Gauge} value={`${totalQ ? Math.round(totalCorrect/totalQ*100) : 0}%`} label="accuracy" note="Across all practice"/><Metric icon={Clock3} value={`${store.daily.reduce((s,d)=>s+d.minutes,0)}`} label="minutes logged" note={`${store.profile.dailyMinutes} min daily target`}/></div><div className="dashboard-grid"><section className="panel activity-panel"><PanelTitle icon={Activity} title="Study pulse" meta="Last 12 weeks"/><div className="heatmap">{activity.map((day,i)=><div key={i} className={`heat-cell level-${day.level}`} title={`${day.label}: ${day.count} questions`}/>)}</div><div className="heat-legend"><span>Less</span>{[0,1,2,3,4].map(n=><i key={n} className={`level-${n}`}/>)}<span>More</span></div></section><section className="panel next-panel"><PanelTitle icon={Target} title="Your route" meta="Prelims → Final"/><div className="route-step active"><span>01</span><div><strong>Preliminary written test</strong><small>2 papers · 100 questions each · 3 hours each</small></div><em>Now</em></div><div className="route-step"><span>02</span><div><strong>PMT & PET</strong><small>Track physical preparation beside written prep</small></div></div><div className="route-step"><span>03</span><div><strong>Final written examination</strong><small>4 papers · language + merit papers</small></div></div></section></div><section className="notice"><div><FileText size={20}/><div><strong>Current-cycle foundation</strong><p>This workspace follows the official 2026 main SI notification and keeps older pattern data only as context.</p></div></div><a href="https://slprb.ap.gov.in/2026_PDFS/SLPRB_AP_SI_Notification_2026.pdf" target="_blank">Read official PDF <ExternalLink size={14}/></a></section></>
-}
-function Metric({icon:Icon,value,label,note}:{icon:typeof Flame;value:string;label:string;note:string}) { return <div className="metric"><div className="metric-icon"><Icon size={19}/></div><div><strong>{value}</strong><span>{label}</span><small>{note}</small></div></div> }
-function PanelTitle({icon:Icon,title,meta}:{icon:typeof Activity;title:string;meta:string}) { return <div className="panel-title"><div><Icon size={17}/><strong>{title}</strong></div><span>{meta}</span></div> }
-
-function Syllabus({ onPractice }: { onPractice: (s: Subject) => void }) {
-  const [open, setOpen] = useState(topics[0].id)
-  const [theoryOpen, setTheoryOpen] = useState(topics[0].id)
-  const [theoryTab, setTheoryTab] = useState<'concepts'|'formulae'|'examples'|'revision'>('concepts')
-  return <><PageHead eyebrow="Official syllabus map" title="Learn the idea before the shortcut." copy="Every unit now includes concept theory, formulae or rules, worked examples, common traps, revision points, trusted sources and a direct practice route." action={<a className="secondary-button" href="https://slprb.ap.gov.in/2026_PDFS/SLPRB_AP_SI_Notification_2026.pdf" target="_blank"><FileText size={17}/> 2026 notice</a>}/><div className="pattern-row"><div><span>PRELIMS / PAPER I</span><strong>Arithmetic + reasoning</strong><small>Concepts, formulae and timed problem solving</small></div><div><span>PRELIMS / PAPER II</span><strong>General studies</strong><small>Connected theory, primary sources and recall</small></div><div><span>PRACTICE LIBRARY</span><strong>{questions.length.toLocaleString('en-IN')} questions</strong><small>Filtered drills with worked solutions</small></div></div><div className="topic-list">{topics.map((topic,index)=>{const isOpen=open===topic.id,theory=theoryByTopicId[topic.id],subjectCount=questions.filter(item=>item.subject===topic.subject).length;return <article className={`topic-card ${isOpen?'expanded':''}`} key={topic.id}><button className="topic-heading" onClick={()=>setOpen(isOpen?'':topic.id)}><span className="topic-number">{String(index+1).padStart(2,'0')}</span><div><small>{topic.subject} · {subjectCount.toLocaleString('en-IN')} questions</small><h2>{topic.title}</h2><p>{theory?.overview??topic.description}</p></div><div className="topic-toggle">{isOpen?<ChevronDown/>:<ChevronRight/>}</div></button>{isOpen&&<><div className="topic-body"><div><span className="section-label">CONCEPT CHECKLIST</span><ul className="concept-list">{topic.concepts.map(concept=><li key={concept}><Check size={14}/>{concept}</li>)}</ul><div className="topic-actions"><button className="primary-button compact" onClick={()=>{setTheoryOpen(theoryOpen===topic.id?'':topic.id);setTheoryTab('concepts')}}><BookOpen size={15}/>{theoryOpen===topic.id?'Close theory':'Study theory'}</button><button className="secondary-button compact" onClick={()=>onPractice(topic.subject)}><Play size={15}/> Practise this unit</button></div></div><div><span className="section-label">TRUSTED SOURCES</span><div className="source-list">{topic.sources.map(source=><a href={source.url} target="_blank" key={source.label}><div><strong>{source.label}</strong><small>{source.note}</small></div><ExternalLink size={15}/></a>)}</div></div></div>{theory&&theoryOpen===topic.id&&<TheoryReader chapter={theory} tab={theoryTab} setTab={setTheoryTab} onPractice={()=>onPractice(topic.subject)}/>}</>}</article>})}</div><div className="source-policy"><CircleHelp size={20}/><div><strong>How sources are handled</strong><p>Commercial books are linked for reference and are not copied. Theory is editorially written from the official syllabus and primary or standard educational sources; practice questions are original unless explicitly attributed to a public official paper.</p></div></div></>
-}
-
-function TheoryReader({chapter,tab,setTab,onPractice}:{chapter:TheoryChapter;tab:'concepts'|'formulae'|'examples'|'revision';setTab:(tab:'concepts'|'formulae'|'examples'|'revision')=>void;onPractice:()=>void}) {
-  return <section className="theory-reader"><header><div><span className="eyebrow">Complete theory chapter</span><h3>{chapter.title}</h3><p>{chapter.overview}</p></div><div className="theory-chapter-meta"><strong>{chapter.sections.reduce((sum,section)=>sum+section.concepts.length,0)+chapter.formulae.length+chapter.revision.length}</strong><span>study points</span></div></header><nav className="theory-tabs" aria-label="Theory chapter sections"><button className={tab==='concepts'?'active':''} onClick={()=>setTab('concepts')}>Concepts</button><button className={tab==='formulae'?'active':''} onClick={()=>setTab('formulae')}>Formulae & rules</button><button className={tab==='examples'?'active':''} onClick={()=>setTab('examples')}>Worked examples</button><button className={tab==='revision'?'active':''} onClick={()=>setTab('revision')}>Traps & revision</button></nav>{tab==='concepts'&&<div className="theory-section-grid">{chapter.sections.map((section,index)=><article className="theory-concept-card" key={section.title}><span>{String(index+1).padStart(2,'0')}</span><h4>{section.title}</h4><ul>{section.concepts.map(concept=><li key={concept}>{concept}</li>)}</ul></article>)}</div>}{tab==='formulae'&&<div className="formula-grid">{chapter.formulae.length?chapter.formulae.map(formula=><article key={formula.label}><span>{formula.label}</span><strong>{formula.expression}</strong><p>{formula.explanation}</p></article>):<div className="theory-empty">This chapter uses rules and relationships rather than a fixed numerical formula. Review the concept cards and worked examples.</div>}</div>}{tab==='examples'&&<div className="worked-grid">{chapter.workedExamples.map((example,index)=><article key={example.problem}><div className="worked-number">EXAMPLE {String(index+1).padStart(2,'0')}</div><h4>{example.problem}</h4><ol>{example.steps.map(step=><li key={step}>{step}</li>)}</ol><div className="worked-answer"><Check size={16}/><strong>{example.answer}</strong></div></article>)}</div>}{tab==='revision'&&<div className="revision-grid"><article className="trap-card"><span className="section-label">COMMON TRAPS</span><ul>{chapter.traps.map(trap=><li key={trap}><X size={14}/>{trap}</li>)}</ul></article><article className="revision-card"><span className="section-label">QUICK REVISION</span><ul>{chapter.revision.map(point=><li key={point}><Check size={14}/>{point}</li>)}</ul></article></div>}<footer><div><span className="section-label">CHAPTER SOURCES</span><div>{chapter.sources.map(source=><a href={source.url} target="_blank" rel="noreferrer" key={source.label}>{source.label}<ExternalLink size={12}/></a>)}</div></div><button className="primary-button" onClick={onPractice}><Play size={16}/> Practise {chapter.subject}</button></footer></section>
-}
-
-function Practice({
-  saved,
-  setStore,
-  onQuiz,
-}: {
-  saved: string[];
-  setStore: React.Dispatch<React.SetStateAction<Store>>;
-  onQuiz: (q: Quiz) => void;
-}) {
-  const [subject, setSubject] = useState<"All" | Subject>("All"),
-    [search, setSearch] = useState(""),
-    [topic, setTopic] = useState("All"),
-    [difficulty, setDifficulty] = useState<"All" | Question["difficulty"]>("All"),
-    [visibleCount, setVisibleCount] = useState(20),
-    [mode, setMode] = useState<"standard" | "hard">("standard"),
-    [activeHardTopic, setActiveHardTopic] = useState("");
-  const subjects: ("All" | Subject)[] = [
-    "All",
-    "Arithmetic",
-    "Reasoning",
-    "General Studies",
-    "AP Focus",
-    "English",
-  ];
-  const subjectPool = questions.filter(
-    (item) => subject === "All" || item.subject === subject,
+export default function App() {
+  const [store, setStore] = useState<Store>(() => {
+      const s = loadStore();
+      if (params.get("exam") === "nicl-ao") s.activeExam = "nicl-ao";
+      return s;
+    }),
+    [view, setView] = useState<View>(
+      navigation.some((n) => n.id === params.get("view"))
+        ? (params.get("view") as View)
+        : "dashboard",
+    ),
+    [stage, setStage] = useState<Stage>(
+      params.get("stage") === "mains" ? "mains" : "prelims",
+    ),
+    [stream, setStream] = useState<Stream>(
+      params.get("stream") === "it" ? "it" : "generalist",
+    );
+  const [quiz, setQuiz] = useState<Quiz | null>(null),
+    [resume, setResume] = useState<Quiz | null>(readQuiz),
+    [report, setReport] = useState<Attempt | null>(null),
+    [settings, setSettings] = useState(false),
+    [mobile, setMobile] = useState(false),
+    [error, setError] = useState(""),
+    [guest, setGuest] = useState(false);
+  const cloudSetter = useCallback<Dispatch<SetStateAction<Store>>>(
+    (value) =>
+      setStore((current) =>
+        normalizeStore(typeof value === "function" ? value(current) : value),
+      ),
+    [],
   );
-  const topicOptions = [...new Set(subjectPool.map((item) => item.topic))].sort();
-  const filtered = subjectPool.filter((item) =>
-    (topic === "All" || item.topic === topic) &&
-    (mode === "hard" || difficulty === "All" || item.difficulty === difficulty) &&
-    `${item.question} ${item.topic}`.toLowerCase().includes(search.toLowerCase()),
-  );
-  const hardPool = filtered.filter((item) => item.difficulty === "Hard");
-  const hardGroups = Array.from(
-    hardPool
-      .reduce((groups, item) => {
-        const key = `${item.subject}|${item.topic}`;
-        const current = groups.get(key) ?? [];
-        current.push(item);
-        groups.set(key, current);
-        return groups;
-      }, new Map<string, Question[]>())
-      .entries(),
-  );
-  const selectedGroup =
-    hardGroups.find(([key]) => key === activeHardTopic) ?? hardGroups[0];
-  const toggleSave = (id: string) =>
-    setStore((state) => ({
-      ...state,
-      saved: state.saved.includes(id)
-        ? state.saved.filter((item) => item !== id)
-        : [...state.saved, id],
-    }));
-  const startHardDrill = () => {
-    const pool = selectedGroup?.[1] ?? hardPool;
-    if (pool.length)
-      onQuiz(
-        makeHardQuiz(
-          pool,
-          selectedGroup
-            ? `${selectedGroup[1][0].topic} hard challenge`
-            : "Mixed hard challenge",
+  const cloud = useCloudSync(store, cloudSetter, {
+      createEmptyValue: createDefaultStore,
+    }),
+    examId = store.activeExam,
+    exam = EXAMS[examId],
+    progress = store.exams[examId],
+    bank =
+      examId === "ap-si"
+        ? questions
+        : niclQuestions.filter(
+            (q) => stream === "it" || q.subject !== "IT Professional Knowledge",
+          );
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    } catch {
+      queueMicrotask(() =>
+        setError(
+          "Browser storage is full. Export your progress in Settings before clearing any data.",
         ),
       );
+    }
+  }, [store]);
+  useEffect(() => {
+    const p = new URLSearchParams({
+      exam: examId,
+      view,
+      stage,
+      ...(examId === "nicl-ao" ? { stream } : {}),
+    });
+    window.history.replaceState(null, "", `?${p}`);
+    document.title = `${navigation.find((n) => n.id === view)?.label} · ${exam.shortName} · Exam Prep King`;
+  }, [exam.shortName, examId, stage, stream, view]);
+  const navigate = (next: View) => {
+    setView(next);
+    setMobile(false);
+    setError("");
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
-  return (
+  const changeExam = (next: ExamId) => {
+    setStore((s) => ({ ...s, activeExam: next }));
+    setReport(null);
+    setStage("prelims");
+    setMobile(false);
+    setError("");
+  };
+  const updateProgress = (fn: (p: ExamProgress) => ExamProgress) =>
+    setStore((s) => ({
+      ...s,
+      exams: { ...s.exams, [examId]: fn(s.exams[examId]) },
+    }));
+  const begin = (q: Quiz) => {
+    if (resume) {
+      setError("Resume or submit your saved test before starting another one.");
+      return;
+    }
+    const active = startQuiz(q);
+    try {
+      localStorage.setItem(ACTIVE_QUIZ_KEY, JSON.stringify(active));
+      setError("");
+    } catch {
+      setError(
+        "This test cannot be saved because browser storage is full. Keep the test open and export your progress before clearing data.",
+      );
+    }
+    setQuiz(active);
+    setResume(active);
+  };
+  const submit = (attempt: Attempt) => {
+    setStore((s) => saveAttempt(s, attempt));
+    localStorage.removeItem(ACTIVE_QUIZ_KEY);
+    setQuiz(null);
+    setResume(null);
+    setReport(attempt);
+    setView("reports");
+  };
+  const daily = () => {
+    try {
+      begin(
+        createPracticeQuiz({
+          examId,
+          stream,
+          pool: bank,
+          title: `${exam.shortName} · Daily challenge`,
+          count: 10,
+          minutes: 12,
+          seed: Number(
+            new Date().toISOString().slice(0, 10).replaceAll("-", ""),
+          ),
+        }),
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  if (!cloud.authReady)
+    return (
+      <main className="loading-screen">
+        <Crown size={36} />
+        <h1>Exam Prep King</h1>
+        <p role="status">Restoring your study desk…</p>
+      </main>
+    );
+  if (cloud.cloudConfigured && !cloud.user && !guest)
+    return <Login cloud={cloud} onGuest={() => setGuest(true)} />;
+  const sidebar = (
     <>
-      <PageHead
-        eyebrow={mode === "hard" ? "High-difficulty practice" : "Practice room"}
-        title={
-          mode === "hard"
-            ? "Work at the edge of your ability."
-            : "Train one weakness at a time."
-        }
-        copy={
-          mode === "hard"
-            ? `${hardPool.length} hard questions in the current filter, each with a strict solve-time target and a worked solution.`
-            : `${questions.length} original questions with hints, solutions and solve-time targets.`
-        }
-        action={
+      <a
+        className="brand"
+        href="?view=dashboard"
+        aria-label="Exam Prep King home"
+      >
+        <span className="brand-mark">
+          <Crown size={25} />
+        </span>
+        <span>
+          Exam Prep{" "}
+          <strong>
+            King<span className="brand-period">.</span>
+          </strong>
+        </span>
+      </a>
+      <div className="sidebar-label">YOUR EXAM</div>
+      <div className="exam-switcher">
+        {(["ap-si", "nicl-ao"] as ExamId[]).map((id) => (
           <button
-            className="primary-button"
-            disabled={mode === "hard" ? hardPool.length === 0 : filtered.length === 0}
-            onClick={
-              mode === "hard"
-                ? startHardDrill
-                : () =>
-                    onQuiz(
-                      makePracticeQuiz(filtered, topic === "All" ? `${subject} mixed practice` : `${topic} practice`),
-                    )
-            }
+            key={id}
+            onClick={() => changeExam(id)}
+            className={id === examId ? "selected" : ""}
           >
-            <Zap size={17} />
-            {mode === "hard" ? "Start hard drill" : "Quick set"}
-          </button>
-        }
-      />
-      <div className="practice-mode-tabs">
-        <button
-          className={mode === "standard" ? "active" : ""}
-          onClick={() => { setMode("standard"); setVisibleCount(20) }}
-        >
-          <Brain size={16} /> Standard practice
-        </button>
-        <button
-          className={mode === "hard" ? "active" : ""}
-          onClick={() => { setMode("hard"); setVisibleCount(20) }}
-        >
-          <Flame size={16} /> Hard challenges
-        </button>
-      </div>
-      <div className="filter-bar">
-        <div className="search-box">
-          <Search size={17} />
-          <input
-            value={search}
-            onChange={(event) => { setSearch(event.target.value); setVisibleCount(20) }}
-            placeholder="Search a topic or question"
-          />
-        </div>
-        <div className="filter-tabs">
-          {subjects.map((item) => (
-            <button
-              key={item}
-              className={subject === item ? "active" : ""}
-              onClick={() => {
-                setSubject(item);
-                setTopic("All");
-                setVisibleCount(20);
-                setActiveHardTopic("");
-              }}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-        <label className="archive-select practice-select"><span>Topic</span><select value={topic} onChange={(event)=>{setTopic(event.target.value);setVisibleCount(20)}}><option>All</option>{topicOptions.map(item=><option key={item}>{item}</option>)}</select></label>
-        {mode === "standard" && <label className="archive-select practice-select"><span>Level</span><select value={difficulty} onChange={(event)=>{setDifficulty(event.target.value as "All"|Question["difficulty"]);setVisibleCount(20)}}>{["All","Easy","Medium","Hard"].map(item=><option key={item}>{item}</option>)}</select></label>}
-      </div>
-      {mode === "standard" ? (
-        <><div className="practice-library-summary"><strong>{filtered.length.toLocaleString("en-IN")}</strong><span>questions match this library view</span><small>Showing {Math.min(visibleCount,filtered.length)} at a time for faster browsing.</small></div><div className="question-list">
-          {filtered.slice(0,visibleCount).map((item, index) => (
-            <PracticeCard
-              key={item.id}
-              item={item}
-              number={index + 1}
-              saved={saved.includes(item.id)}
-              onSave={() => toggleSave(item.id)}
-            />
-          ))}</div>{visibleCount<filtered.length&&<button className="load-more" onClick={()=>setVisibleCount(count=>count+20)}>Load 20 more <ArrowRight size={15}/></button>}</>
-      ) : (
-        <>
-          <section className="hard-brief">
-            <div>
-              <span>
-                <Flame size={15} /> HARD MODE
-              </span>
-              <h2>Accuracy under pressure.</h2>
-              <p>
-                Questions are modelled on multi-step competitive-exam patterns.
-                The timer uses the sum of each question's editorial solve-time
-                target.
-              </p>
-            </div>
-            <div>
-              <strong>60%</strong>
-              <span>hard target in mocks</span>
-            </div>
-          </section>
-          {hardGroups.length ? (
-            <>
-              <div className="hard-topic-grid">
-                {hardGroups.map(([key, items]) => {
-                  const seconds = items.reduce(
-                    (sum, item) => sum + item.seconds,
-                    0,
-                  );
-                  return (
-                    <button
-                      key={key}
-                      className={selectedGroup?.[0] === key ? "active" : ""}
-                      onClick={() => { setActiveHardTopic(key); setVisibleCount(20) }}
-                    >
-                      <span>{items[0].subject}</span>
-                      <strong>{items[0].topic}</strong>
-                      <small>
-                        {items.length} questions · {Math.ceil(seconds / 60)} min
-                        target
-                      </small>
-                      <i>
-                        <ArrowRight size={14} />
-                      </i>
-                    </button>
-                  );
-                })}
-              </div>
-              {selectedGroup && (
-                <section className="hard-topic-section">
-                  <div className="hard-topic-head">
-                    <div>
-                      <span className="eyebrow">Focused hard set</span>
-                      <h2>{selectedGroup[1][0].topic}</h2>
-                      <p>
-                        {selectedGroup[1].length} questions ·{" "}
-                        {Math.ceil(
-                          selectedGroup[1].reduce(
-                            (sum, item) => sum + item.seconds,
-                            0,
-                          ) / 60,
-                        )}{" "}
-                        minute combined target
-                      </p>
-                    </div>
-                    <button
-                      className="secondary-button"
-                      onClick={startHardDrill}
-                    >
-                      <Play size={16} /> Timed challenge
-                    </button>
-                  </div>
-                  <div className="question-list">
-                    {selectedGroup[1].slice(0,visibleCount).map((item, index) => (
-                      <PracticeCard
-                        key={item.id}
-                        item={item}
-                        number={index + 1}
-                        saved={saved.includes(item.id)}
-                        onSave={() => toggleSave(item.id)}
-                      />
-                    ))}
-                  </div>{visibleCount<selectedGroup[1].length&&<button className="load-more" onClick={()=>setVisibleCount(count=>count+20)}>Load 20 more <ArrowRight size={15}/></button>}
-                </section>
+            <span className={`exam-icon ${id}`}>
+              {id === "ap-si" ? (
+                <ShieldCheck size={18} />
+              ) : (
+                <GraduationCap size={18} />
               )}
-            </>
-          ) : (
-            <div className="empty-state compact-empty">
-              <div>
-                <Flame size={30} />
-              </div>
-              <h2>No hard questions match this filter.</h2>
-              <p>Clear the search or choose another subject.</p>
-            </div>
-          )}
-        </>
+            </span>
+            <span>
+              <strong>{EXAMS[id].shortName}</strong>
+              <small>
+                {id === "ap-si"
+                  ? "Andhra Pradesh Police"
+                  : "National Insurance"}
+              </small>
+            </span>
+            <ChevronRight size={15} />
+          </button>
+        ))}
+      </div>
+      {examId === "nicl-ao" && (
+        <label className="sidebar-stream">
+          NICL stream
+          <select
+            value={stream}
+            onChange={(e) => {
+              setStream(e.target.value as Stream);
+              setReport(null);
+            }}
+          >
+            <option value="generalist">Generalist</option>
+            <option value="it">IT Specialist</option>
+          </select>
+        </label>
       )}
+      <div className="sidebar-label">PREPARATION</div>
+      <nav aria-label="Main navigation">
+        {navigation.map((n) => (
+          <button
+            key={n.id}
+            onClick={() => navigate(n.id)}
+            aria-current={view === n.id ? "page" : undefined}
+            className={view === n.id ? "active" : ""}
+          >
+            <n.icon size={19} />
+            {n.label}
+            {view === n.id && <span className="nav-dot" />}
+          </button>
+        ))}
+      </nav>
+      <div className="sidebar-source">
+        <ShieldCheck size={21} />
+        <strong>Prepare with provenance.</strong>
+        <p>Original papers. Honest sources. Progress that belongs to you.</p>
+        <a href={exam.officialUrl} target="_blank" rel="noreferrer">
+          Official notification <ExternalLink size={13} />
+        </a>
+      </div>
+      <button
+        className="sidebar-settings"
+        onClick={() => {
+          setSettings(true);
+          setMobile(false);
+        }}
+      >
+        <Settings2 size={18} /> Profile & backup
+      </button>
+      <small className="sidebar-version">EXAM PREP KING / 2.0</small>
     </>
   );
-}
-function PracticeCard({item,number,saved,onSave}:{item:Question;number:number;saved:boolean;onSave:()=>void}) {
-  const [open,setOpen]=useState(false), [choice,setChoice]=useState<number|null>(null)
-  return <article className="practice-card"><div className="question-meta"><span>{item.subject} / {item.topic}</span><div><em>{item.difficulty}</em><span><TimerReset size={13}/>{item.seconds}s</span></div></div><div className="question-row"><span className="q-index">{String(number).padStart(2,'0')}</span><h3>{item.question}</h3></div><div className="mini-options">{item.options.map((option,i)=><button key={option} onClick={()=>setChoice(i)} className={`${choice===i?'selected':''} ${open&&i===item.answer?'correct':''} ${open&&choice===i&&i!==item.answer?'wrong':''}`}><span>{String.fromCharCode(65+i)}</span>{option}</button>)}</div><div className="question-actions"><button onClick={()=>setOpen(!open)}><CircleHelp size={15}/>{open?'Hide solution':'Check answer'}</button><button onClick={onSave}>{saved?'Saved':'Save for revision'}</button></div>{open&&<div className="solution"><strong>{choice===item.answer?'Correct — well done.':`Answer: ${String.fromCharCode(65+item.answer)}. ${item.options[item.answer]}`}</strong><p>{item.explanation}</p><small>{item.source}</small></div>}</article>
-}
-
-function Mocks({ attempts, onQuiz }: { attempts: Attempt[]; onQuiz:(q:Quiz)=>void }) {
-  const [filter,setFilter]=useState<'All'|'Full paper'|'Sectional'>('All'), list=mockSeries.filter(mock=>filter==='All'||mock.type===filter)
-  return <><PageHead eyebrow="50-test campaign" title="Pressure-test your preparation." copy="Ten full simulations and forty sectional missions now use a hard-heavy editorial mix, unique questions per attempt and the official full-paper time limit."/><div className="mock-summary"><div><strong>50</strong><span>test blueprints</span></div><div><strong>60%</strong><span>target hard share</span></div><div><strong>{attempts.length}</strong><span>attempts completed</span></div><p><Check size={16}/> {questions.length} reviewed original items. Each test selects hard questions first, then balances medium and foundation checks without repeats inside that attempt.</p></div><div className="tabs"><button className={filter==='All'?'active':''} onClick={()=>setFilter('All')}>All tests</button><button className={filter==='Full paper'?'active':''} onClick={()=>setFilter('Full paper')}>Full paper</button><button className={filter==='Sectional'?'active':''} onClick={()=>setFilter('Sectional')}>Sectional</button></div><div className="mock-grid">{list.map(mock=>{const done=attempts.find(attempt=>attempt.id.startsWith(mock.id)),subjectPool=getMockPool(mock.subject),available=Math.min(mock.questions,subjectPool.length),preview=hardWeightedSelection(subjectPool,available,mock.number*937),hardCount=preview.filter(item=>item.difficulty==='Hard').length;return <article className="mock-card" key={mock.id}><div className="mock-top"><span>MISSION {String(mock.number).padStart(2,'0')}</span><em>{mock.type}</em></div><h3>{mock.title}</h3><p>{mock.subject} · {available} unique questions</p><div className="mock-stats"><span><Clock3 size={14}/>{mock.minutes} min limit</span><span><Flame size={14}/>{hardCount} hard</span><span><FileText size={14}/>{available} questions</span></div>{done?<button className="completed-button" onClick={()=>onQuiz(makeMock(mock.number,mock.id,mock.title,mock.minutes,available,mock.subject))}><Check size={16}/> Scored {done.score}/{done.total} · Retry</button>:<button className="mock-start" onClick={()=>onQuiz(makeMock(mock.number,mock.id,mock.title,mock.minutes,available,mock.subject))}><Play size={16}/>Start test<ArrowRight size={15}/></button>}</article>})}</div></>
-}
-
-function Analysis({store,onNavigate}:{store:Store;onNavigate:(v:View)=>void}) {
-  const attempts=store.attempts, total=attempts.reduce((s,a)=>s+a.total,0), correct=attempts.reduce((s,a)=>s+a.score,0), accuracy=total?Math.round(correct/total*100):0, target=readinessBenchmarks[store.profile.category]||70, readiness=Math.max(0,Math.min(99,Math.round(accuracy*.72+(Math.min(attempts.length,8)/8)*18+10)))
-  const subjectRows=useMemo(()=>{const map:Record<string,{correct:number,total:number}>={};attempts.forEach(a=>Object.entries(a.subjects).forEach(([s,v])=>{map[s]??={correct:0,total:0};map[s].correct+=v.correct;map[s].total+=v.total}));return Object.entries(map).map(([name,value])=>({name,percent:Math.round(value.correct/value.total*100),...value})).sort((a,b)=>a.percent-b.percent)},[attempts])
-  return <><PageHead eyebrow="Performance room" title="Turn every error into a plan." copy="Readiness combines accuracy and completed test volume. It becomes useful after several full-length attempts." action={<button className="secondary-button" onClick={()=>onNavigate('mocks')}><Play size={16}/> Take a mock</button>}/>{!attempts.length?<div className="empty-state"><div><BarChart3 size={32}/></div><h2>Your report starts after the first set.</h2><p>Complete the daily drill or a sectional mock. You will get subject-level accuracy and a revision priority.</p><button className="primary-button" onClick={()=>onNavigate('practice')}>Open practice room <ArrowRight size={16}/></button></div>:<><div className="readiness-grid"><section className="readiness-score"><div className="score-ring" style={{'--score':`${readiness*3.6}deg`} as React.CSSProperties}><div><strong>{readiness}</strong><span>/ 100</span></div></div><div><span className="eyebrow">Modelled readiness</span><h2>{readiness>=target?'On track — defend your accuracy.':'Build consistency before predicting rank.'}</h2><p>Category benchmark: {store.profile.category} · planning target {target}%. This is not an APSLPRB rank or official cutoff.</p></div></section><section className="forecast"><span className="eyebrow">Predictor status</span><strong>{attempts.length < 3 ? `${3-attempts.length} more full attempts needed` : `${Math.max(1,Math.round(10000*(1-accuracy/110)))} modelled rank / 10,000`}</strong><p>{attempts.length<3?'Rank modelling unlocks after at least three completed tests.':'A planning estimate from your local scores, not a live candidate cohort.'}</p><div className="confidence"><span>Confidence</span><div><i style={{width:`${Math.min(75,18+attempts.length*6)}%`}}/></div><em>{Math.min(75,18+attempts.length*6)}%</em></div></section></div><div className="analysis-grid"><section className="panel"><PanelTitle icon={Brain} title="Subject diagnosis" meta={`${total} answers`}/><div className="subject-bars">{subjectRows.map(row=><div key={row.name}><div><strong>{row.name}</strong><span>{row.correct}/{row.total} · {row.percent}%</span></div><div className="bar"><i style={{width:`${row.percent}%`}}/></div></div>)}</div></section><section className="panel"><PanelTitle icon={TrendingUp} title="Recent attempts" meta="Newest first"/><div className="attempt-list">{attempts.slice(0,5).map(a=><div key={a.id}><span className={a.score/a.total>=.7?'good':''}>{Math.round(a.score/a.total*100)}%</span><div><strong>{a.title}</strong><small>{new Date(a.date).toLocaleDateString('en-IN')} · {Math.round(a.seconds/60)} min</small></div></div>)}</div></section></div></>}</>
-}
-
-function ProfilePanel({store,setStore,cloud,onSignOut,onClose}:{store:Store;setStore:React.Dispatch<React.SetStateAction<Store>>;cloud:ReturnType<typeof useCloudSync<Store>>;onSignOut:()=>Promise<void>;onClose:()=>void}) {
-  const fileRef=useRef<HTMLInputElement>(null), update=(key:keyof Profile,value:string|number)=>setStore(s=>({...s,profile:{...s.profile,[key]:value}})), exportData=()=>{const blob=new Blob([JSON.stringify(store,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`lakshya-backup-${todayKey()}.json`;a.click();URL.revokeObjectURL(a.href)}, importData=(file?:File)=>{if(!file)return;const reader=new FileReader();reader.onload=()=>{try{setStore({...defaultStore,...JSON.parse(String(reader.result))});onClose()}catch{alert('That backup file could not be read.')}};reader.readAsText(file)}
-  const [email,setEmail]=useState(''),[authMessage,setAuthMessage]=useState('')
-  const emailLogin=async()=>{if(!email.trim())return;const error=await cloud.signInWithEmail(email.trim());setAuthMessage(error??'Magic link sent. Check your inbox.')}
-  const googleLogin=async()=>{const error=await cloud.signInWithGoogle();if(error)setAuthMessage(error)}
-  return <div className="modal-layer"><button className="modal-scrim" onClick={onClose}/><aside className="profile-panel"><div className="drawer-head"><div><span className="eyebrow">Profile & cloud</span><h2>Preparation settings</h2></div><button className="icon-button" onClick={onClose}><X size={19}/></button></div><div className="cloud-box"><div className="cloud-head"><div><strong>{cloud.user?'Progress is backed up':'Sync across devices'}</strong><small>{cloud.user?cloud.user.email:(cloud.cloudConfigured?'Sign in with one email':'Supabase connection is ready for credentials')}</small></div><span className={`sync-pill ${cloud.syncState}`}>{cloud.syncState}</span></div>{cloud.user?<div className="cloud-actions"><button onClick={cloud.syncNow}><Upload size={14}/> Sync now</button><button className="sign-out-button" onClick={onSignOut}><LogOut size={14}/> Sign out</button></div>:cloud.cloudConfigured?<><div className="email-login"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/><button onClick={emailLogin}>Send magic link</button></div><button className="google-button" onClick={googleLogin}>Continue with Google</button>{authMessage&&<p>{authMessage}</p>}</>:<p>Add the project URL and publishable key in Vercel to activate sign-in.</p>}</div><label>Display name<input value={store.profile.name} onChange={e=>update('name',e.target.value)}/></label><label>Category<select value={store.profile.category} onChange={e=>update('category',e.target.value)}>{['OC / EWS','BC-A','BC-B','BC-C','BC-D','BC-E','SC','ST'].map(c=><option key={c}>{c}</option>)}</select></label><label>Target date<input type="date" value={store.profile.examDate} onChange={e=>update('examDate',e.target.value)}/></label><label>Daily study target<input type="number" min="15" step="15" value={store.profile.dailyMinutes} onChange={e=>update('dailyMinutes',Number(e.target.value))}/></label><div className="backup-box"><strong>Portable local backup</strong><p>Export before clearing browser data or moving devices.</p><div><button onClick={exportData}><Download size={15}/> Export JSON</button><button onClick={()=>fileRef.current?.click()}><Upload size={15}/> Import</button><input ref={fileRef} hidden type="file" accept="application/json" onChange={e=>importData(e.target.files?.[0])}/></div></div><button className="primary-button full" onClick={onClose}>Save settings</button></aside></div>
-}
-
-function QuizRunner({quiz,onClose,onSubmit}:{quiz:Quiz;onClose:()=>void;onSubmit:(a:Attempt)=>void}) {
-  const [index,setIndex]=useState(quiz.index??0), [answers,setAnswers]=useState<Record<string,number>>(quiz.answers??{}), [marked,setMarked]=useState<string[]>(quiz.marked??[]), [showHint,setShowHint]=useState(false), [startTime]=useState(()=>quiz.startedAt??Date.now()), [expiry]=useState(()=>quiz.expiresAt??Date.now()+quiz.minutes*60000), [remaining,setRemaining]=useState(()=>Math.max(0,Math.floor(((quiz.expiresAt??Date.now()+quiz.minutes*60000)-Date.now())/1000))), item=quiz.items[index]
-  const submit=useCallback(()=>{const submittedAt=Date.now(),subjects:Record<string,{correct:number;total:number}>={};let score=0;quiz.items.forEach(q=>{subjects[q.subject]??={correct:0,total:0};subjects[q.subject].total++;if(answers[q.id]===q.answer){score++;subjects[q.subject].correct++}});onSubmit({id:`${quiz.title.toLowerCase().replace(/\W+/g,'-')}-${submittedAt}`,title:quiz.title,date:new Date(submittedAt).toISOString(),score,total:quiz.items.length,seconds:Math.round((submittedAt-startTime)/1000),subjects})},[answers,onSubmit,quiz,startTime])
-  useEffect(()=>{const timer=window.setInterval(()=>{const left=Math.max(0,Math.floor((expiry-Date.now())/1000));setRemaining(left);if(!left)window.clearInterval(timer)},1000);return()=>clearInterval(timer)},[expiry])
-  useEffect(()=>{localStorage.setItem(ACTIVE_QUIZ_KEY,JSON.stringify({...quiz,index,answers,marked,startedAt:startTime,expiresAt:expiry}))},[answers,expiry,index,marked,quiz,startTime])
-  useEffect(()=>{if(remaining===0)submit()},[remaining,submit])
-  return <div className="quiz-layer"><header><div><span className="brand-mark"><ShieldCheck size={20}/></span><div><small>ACTIVE TEST</small><strong>{quiz.title}</strong></div></div><div className={`quiz-timer ${remaining<300?'urgent':''}`}><Clock3 size={18}/><strong>{String(Math.floor(remaining/60)).padStart(2,'0')}:{String(remaining%60).padStart(2,'0')}</strong></div><button className="secondary-button compact" onClick={onClose} aria-label="Exit test"><X size={16}/><span>Exit</span></button></header><div className="quiz-layout"><aside><span className="section-label">QUESTION MAP</span><div className="palette">{quiz.items.map((q,i)=><button key={`${q.id}-${i}`} onClick={()=>{setIndex(i);setShowHint(false)}} className={`${i===index?'active':''} ${answers[q.id]!==undefined?'answered':''} ${marked.includes(q.id)?'marked':''}`}>{i+1}</button>)}</div><div className="legend"><span><i className="answered"/>Answered</span><span><i className="marked"/>Review</span></div><button className="submit-button" onClick={submit}>Submit test <ArrowRight size={16}/></button></aside><main className="quiz-main"><div className="quiz-meta"><span>{item.subject} / {item.topic}</span><span>{item.difficulty} · target {item.seconds}s</span></div><div className="quiz-question"><span>Question {index+1} of {quiz.items.length}</span><h2>{item.question}</h2><div className="quiz-options">{item.options.map((option,i)=><button key={option} className={answers[item.id]===i?'selected':''} onClick={()=>setAnswers(a=>({...a,[item.id]:i}))}><span>{String.fromCharCode(65+i)}</span>{option}</button>)}</div>{showHint&&<div className="hint"><Sparkles size={16}/><strong>Hint:</strong> {item.hint}</div>}</div><div className="quiz-nav"><div><button onClick={()=>setShowHint(!showHint)}><CircleHelp size={16}/> Hint</button><button className={marked.includes(item.id)?'marked':''} onClick={()=>setMarked(m=>m.includes(item.id)?m.filter(x=>x!==item.id):[...m,item.id])}><FileText size={16}/> Mark for review</button><button className="mobile-quiz-submit" onClick={submit}><Check size={16}/> Submit</button></div><div><button disabled={index===0} onClick={()=>{setIndex(i=>i-1);setShowHint(false)}}>Previous</button>{index===quiz.items.length-1?<button className="primary-button compact" onClick={submit}>Finish</button>:<button className="primary-button compact" onClick={()=>{setIndex(i=>i+1);setShowHint(false)}}>Next <ArrowRight size={15}/></button>}</div></div></main></div></div>
-}
-
-function makeQuiz(subject?: Subject, count = 10): Quiz {
-  const pool = subject
-    ? questions.filter((q) => q.subject === subject)
-    : questions;
-  return {
-    title: subject ? `${subject} quick set` : "Daily mixed diagnostic",
-    items: seeded(pool, Number(todayKey().replaceAll("-", ""))).slice(
-      0,
-      Math.min(count, pool.length),
-    ),
-    minutes: Math.max(10, Math.round(count * 1.2)),
-  };
-}
-function makePracticeQuiz(pool: Question[], title: string, count = 10): Quiz {
-  const items = seeded(pool, Number(todayKey().replaceAll("-", "")) + pool.length * 17).slice(0, Math.min(count, pool.length));
-  return { title, items, minutes: Math.max(1, Math.ceil(items.reduce((sum, item) => sum + item.seconds, 0) / 60)) };
-}
-function makeHardQuiz(pool: Question[], title: string, count = 10): Quiz {
-  const items = seeded(
-    pool,
-    Number(todayKey().replaceAll("-", "")) + pool.length,
-  ).slice(0, Math.min(count, pool.length));
-  return {
-    title,
-    items,
-    minutes: Math.max(
-      1,
-      Math.ceil(items.reduce((sum, item) => sum + item.seconds, 0) / 60),
-    ),
-  };
-}
-function getMockPool(subject: string) {
-  if (subject === "Paper I")
-    return questions.filter(
-      (q) => q.subject === "Arithmetic" || q.subject === "Reasoning",
-    );
-  if (subject === "Paper II")
-    return questions.filter(
-      (q) => q.subject === "General Studies" || q.subject === "AP Focus",
-    );
-  return questions.filter((q) => q.subject === subject);
-}
-function hardWeightedSelection(pool: Question[], count: number, seed: number) {
-  const hard = seeded(
-      pool.filter((item) => item.difficulty === "Hard"),
-      seed + 11,
-    ),
-    medium = seeded(
-      pool.filter((item) => item.difficulty === "Medium"),
-      seed + 23,
-    ),
-    easy = seeded(
-      pool.filter((item) => item.difficulty === "Easy"),
-      seed + 37,
-    );
-  const selected = [
-    ...hard.slice(0, Math.ceil(count * 0.6)),
-    ...medium.slice(0, Math.ceil(count * 0.3)),
-    ...easy.slice(0, Math.ceil(count * 0.1)),
-  ];
-  const used = new Set(selected.map((item) => item.id)),
-    remaining = seeded(
-      pool.filter((item) => !used.has(item.id)),
-      seed + 51,
-    );
-  return seeded(
-    [...selected, ...remaining].slice(0, Math.min(count, pool.length)),
-    seed + 73,
+  return (
+    <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+      <aside className="sidebar">{sidebar}</aside>
+      {mobile && (
+        <Dialog
+          title="Navigation"
+          onClose={() => setMobile(false)}
+          className="mobile-navigation"
+        >
+          {sidebar}
+        </Dialog>
+      )}
+      <main className="main">
+        <header className="topbar">
+          <button
+            className="icon-button mobile-menu"
+            aria-label="Open navigation"
+            onClick={() => setMobile(true)}
+          >
+            <Menu size={22} />
+          </button>
+          <div className="breadcrumbs">
+            <span>My preparation</span>
+            <ChevronRight size={14} />
+            <strong>{exam.shortName}</strong>
+            {examId === "nicl-ao" && (
+              <>
+                <ChevronRight size={14} />
+                <span>{stream === "it" ? "IT Specialist" : "Generalist"}</span>
+              </>
+            )}
+          </div>
+          <div className="topbar-right">
+            <span className={`sync-status ${cloud.syncState}`} role="status">
+              <i />
+              {cloud.user
+                ? cloud.syncState === "synced"
+                  ? "Cloud saved"
+                  : cloud.syncState === "error"
+                    ? "Sync failed"
+                    : cloud.syncState === "saving"
+                      ? "Saving…"
+                      : "Loading…"
+                : "Saved on device"}
+            </span>
+            <button
+              className="avatar"
+              aria-label="Open profile settings"
+              onClick={() => setSettings(true)}
+            >
+              {store.profile.name.slice(0, 1).toUpperCase()}
+            </button>
+          </div>
+        </header>
+        <div className="content" id="main-content">
+          {error && (
+            <div className="message error" role="alert">
+              {error}
+              <button
+                className="icon-button"
+                aria-label="Dismiss message"
+                onClick={() => setError("")}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+          {resume && !quiz && (
+            <div className="resume-banner">
+              <Clock3 size={20} />
+              <div>
+                <strong>A test is waiting for you</strong>
+                <span>
+                  {resume.title} · its timer continues while you’re away.
+                </span>
+              </div>
+              <button
+                className="primary-button compact"
+                onClick={() => setQuiz(readQuiz() ?? resume)}
+              >
+                Resume test <ArrowRight size={15} />
+              </button>
+            </div>
+          )}
+          {view === "dashboard" && (
+            <Dashboard
+              name={store.profile.name}
+              examId={examId}
+              stream={stream}
+              bank={bank}
+              progress={progress}
+              onNavigate={navigate}
+              onDaily={daily}
+              onStage={(s) => {
+                setStage(s);
+                navigate("tests");
+              }}
+            />
+          )}
+          {view === "tests" && (
+            <Tests
+              storageScope={cloud.user?.id ?? "guest"}
+              key={`${examId}-${stream}`}
+              examId={examId}
+              stream={stream}
+              stage={stage}
+              setStage={setStage}
+              bank={bank}
+              onStart={begin}
+              onError={setError}
+            />
+          )}
+          {view === "practice" && (
+            <Practice
+              key={`${examId}-${stream}`}
+              examId={examId}
+              stream={stream}
+              bank={bank}
+              progress={progress}
+              onStart={begin}
+              onSave={(id) =>
+                updateProgress((p) => ({
+                  ...p,
+                  saved: p.saved.includes(id)
+                    ? p.saved.filter((s) => s !== id)
+                    : [...p.saved, id],
+                }))
+              }
+            />
+          )}{" "}
+          {view === "papers" && (
+            <PaperArchive
+              key={`${examId}-${stream}`}
+              examId={examId}
+              progress={progress.pyqProgress}
+              onProgress={(id, value) =>
+                updateProgress((p) => ({
+                  ...p,
+                  pyqProgress: { ...p.pyqProgress, [id]: value },
+                }))
+              }
+            />
+          )}{" "}
+          {view === "learn" && (
+            <Learn
+              key={`${examId}-${stream}`}
+              examId={examId}
+              stream={stream}
+              onPractice={() => navigate("practice")}
+            />
+          )}{" "}
+          {view === "reports" &&
+            (report ? (
+              <AttemptReport attempt={report} onClose={() => setReport(null)} />
+            ) : (
+              <Performance
+                progress={progress}
+                stream={stream}
+                examId={examId}
+                onReview={setReport}
+                onPractice={() => navigate("practice")}
+              />
+            ))}
+        </div>
+        <footer className="app-footer">
+          <span>Every focused session counts.</span>
+          <span>
+            Independent preparation · {examId === "ap-si" ? "APSLPRB" : "NICL"}{" "}
+            is the authority for exam rules.
+          </span>
+        </footer>
+      </main>
+      {settings && (
+        <Settings
+          store={store}
+          setStore={setStore}
+          cloud={cloud}
+          onClose={() => setSettings(false)}
+          onSignOut={async () => {
+            try {
+              await cloud.signOut();
+            } catch {
+              setError("Sign-out failed. Check your connection and try again.");
+              setSettings(false);
+              return;
+            }
+            setGuest(false);
+            localStorage.removeItem(ACTIVE_QUIZ_KEY);
+            setQuiz(null);
+            setResume(null);
+            setSettings(false);
+          }}
+        />
+      )}
+      {quiz && (
+        <TestRunner
+          quiz={quiz}
+          onSubmit={submit}
+          onExit={() => {
+            setResume(readQuiz());
+            setQuiz(null);
+          }}
+        />
+      )}
+    </div>
   );
 }
-function makeMock(
-  seed: number,
-  id: string,
-  title: string,
-  minutes: number,
-  count: number,
-  subject: string,
-): Quiz {
-  return {
-    title: `${id} ${title}`,
-    items: hardWeightedSelection(getMockPool(subject), count, seed * 937),
-    minutes,
+
+function Login({
+  cloud,
+  onGuest,
+}: {
+  cloud: ReturnType<typeof useCloudSync<Store>>;
+  onGuest: () => void;
+}) {
+  const [email, setEmail] = useState(""),
+    [message, setMessage] = useState(""),
+    [busy, setBusy] = useState(false);
+  const login = async (google = false) => {
+    if (busy) return;
+    if (!google && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setMessage("Enter a valid email address.");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      const error = google
+        ? await cloud.signInWithGoogle()
+        : await cloud.signInWithEmail(email.trim());
+      setMessage(
+        error ??
+          (google
+            ? "Opening Google sign-in…"
+            : "Check your email for your sign-in link."),
+      );
+    } catch {
+      setMessage("Could not connect. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   };
+  return (
+    <main className="login-page">
+      <section className="login-story">
+        <div className="brand">
+          <span className="brand-mark">
+            <Crown />
+          </span>
+          <span>
+            Exam Prep <strong>King.</strong>
+          </span>
+        </div>
+        <span className="eyebrow">BUILT FOR YOUR NEXT CHAPTER</span>
+        <h1>
+          Big ambitions.
+          <br />
+          Daily progress.
+          <br />
+          <em>Your next rank starts here.</em>
+        </h1>
+        <p>
+          One focused desk for AP SI and NICL AO. Learn deeply, practise
+          deliberately, and walk into your exam ready.
+        </p>
+        <div className="login-exams">
+          <span>
+            <ShieldCheck size={18} /> AP Police SI
+          </span>
+          <span>
+            <GraduationCap size={18} /> NICL AO · Generalist & IT
+          </span>
+        </div>
+      </section>
+      <section className="login-entry">
+        <div className="login-card">
+          <span className="eyebrow">YOUR PREPARATION, CONNECTED</span>
+          <h2>Welcome to your study desk.</h2>
+          <p>
+            Sign in to keep your questions, scores and revision history together
+            across devices.
+          </p>
+          <button
+            className="primary-button full"
+            onClick={() => void login(true)}
+            disabled={busy}
+          >
+            Continue with Google <ArrowRight size={17} />
+          </button>
+          <div className="divider">or use your email</div>
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              void login();
+            }}
+          >
+            <label>
+              Email address
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </label>
+            <button className="secondary-button full" disabled={busy}>
+              {busy ? "Connecting…" : "Send sign-in link"}
+            </button>
+          </form>
+          {message && (
+            <p className="message" role="status">
+              {message}
+            </p>
+          )}
+          <button className="text-button guest-button" onClick={onGuest}>
+            Explore on this device <ArrowRight size={15} />
+          </button>
+          <small>Guest progress stays on this device. Sign in to sync.</small>
+        </div>
+      </section>
+    </main>
+  );
 }
-function calculateStreak(daily:Daily[]){const dates=new Set(daily.filter(d=>d.questions>0).map(d=>d.date));let count=0;const d=new Date();if(!dates.has(d.toLocaleDateString('en-CA')))d.setDate(d.getDate()-1);while(dates.has(d.toLocaleDateString('en-CA'))){count++;d.setDate(d.getDate()-1)}return count}
-function activityDays(daily:Daily[]){const map=new Map(daily.map(d=>[d.date,d.questions]));return Array.from({length:84},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(83-i));const date=d.toLocaleDateString('en-CA'),count=map.get(date)||0;return{label:date,count,level:count===0?0:count<10?1:count<25?2:count<50?3:4}})}
-export default App
+
+function Settings({
+  store,
+  setStore,
+  cloud,
+  onClose,
+  onSignOut,
+}: {
+  store: Store;
+  setStore: Dispatch<SetStateAction<Store>>;
+  cloud: ReturnType<typeof useCloudSync<Store>>;
+  onClose: () => void;
+  onSignOut: () => Promise<void>;
+}) {
+  const [message, setMessage] = useState(""),
+    [pending, setPending] = useState<Store | null>(null),
+    file = useRef<HTMLInputElement>(null);
+  const update = (key: string, value: string | number) =>
+    setStore((s) => ({ ...s, profile: { ...s.profile, [key]: value } }));
+  const exportData = () => {
+    const url = URL.createObjectURL(
+        new Blob([JSON.stringify(store, null, 2)], {
+          type: "application/json",
+        }),
+      ),
+      a = document.createElement("a");
+    a.href = url;
+    a.download = `exam-prep-king-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const importData = async (f?: File) => {
+    if (!f) return;
+    try {
+      if (f.size > 20_000_000)
+        throw new Error(
+          "This file is too large. Choose an exported progress backup.",
+        );
+      const value = JSON.parse(await f.text());
+      if (
+        !value ||
+        (!value.exams && !Array.isArray(value.attempts)) ||
+        !value.profile
+      )
+        throw new Error(
+          "Choose a valid Exam Prep King or Lakshya progress backup.",
+        );
+      setPending(normalizeStore(value));
+    } catch (e) {
+      setMessage((e as Error).message);
+    }
+    if (file.current) file.current.value = "";
+  };
+  return (
+    <Dialog title="Profile & backup" onClose={onClose}>
+      <div className="dialog-body settings-body">
+        <div className="cloud-summary">
+          <ShieldCheck size={22} />
+          <div>
+            <strong>{cloud.user?.email ?? "Studying on this device"}</strong>
+            <small>
+              {cloud.user
+                ? `Cloud status: ${cloud.syncState}`
+                : "Export a backup to keep a portable copy."}
+            </small>
+          </div>
+        </div>
+        <label>
+          Your name
+          <input
+            value={store.profile.name}
+            onChange={(e) => update("name", e.target.value)}
+          />
+        </label>
+        <div className="form-grid">
+          <label>
+            Personal target date
+            <input
+              type="date"
+              value={store.profile.examDate}
+              onChange={(e) => update("examDate", e.target.value)}
+            />
+          </label>
+          <label>
+            Daily study target (min)
+            <input
+              type="number"
+              min={15}
+              max={1440}
+              value={store.profile.dailyMinutes}
+              onChange={(e) =>
+                update(
+                  "dailyMinutes",
+                  Math.max(15, Math.min(1440, Number(e.target.value))),
+                )
+              }
+            />
+          </label>
+        </div>
+        <small>
+          This is your personal planning date, not an official exam date.
+        </small>
+        <div className="backup-box">
+          <h3>Your progress, portable.</h3>
+          <p>
+            Export includes both exams, attempts and saved questions. Lakshya
+            backups can be imported too.
+          </p>
+          <div className="button-row">
+            <button className="secondary-button" onClick={exportData}>
+              <Download size={16} /> Export JSON
+            </button>
+            <button
+              className="secondary-button"
+              onClick={() => file.current?.click()}
+            >
+              <Upload size={16} /> Import backup
+            </button>
+            <input
+              ref={file}
+              type="file"
+              hidden
+              accept=".json,application/json"
+              onChange={(e) => void importData(e.target.files?.[0])}
+            />
+          </div>
+        </div>
+        {pending && (
+          <div className="message">
+            <strong>Replace your current progress?</strong>
+            <p>
+              This imports {pending.exams["ap-si"].attempts.length} AP SI and{" "}
+              {pending.exams["nicl-ao"].attempts.length} NICL attempts. Export
+              your current data first if you want to keep it.
+            </p>
+            <div className="button-row">
+              <button
+                className="secondary-button"
+                onClick={() => setPending(null)}
+              >
+                Cancel import
+              </button>
+              <button
+                className="danger-button"
+                onClick={() => {
+                  setStore(pending);
+                  setPending(null);
+                  setMessage("Backup imported.");
+                }}
+              >
+                Replace with backup
+              </button>
+            </div>
+          </div>
+        )}
+        {message && (
+          <p className="message" role="status">
+            {message}
+          </p>
+        )}
+        <div className="button-row">
+          {cloud.user && (
+            <>
+              <button
+                className="secondary-button"
+                onClick={() => void cloud.syncNow()}
+              >
+                Sync now
+              </button>
+              <button className="text-button" onClick={() => void onSignOut()}>
+                <LogOut size={16} /> Sign out
+              </button>
+            </>
+          )}
+          <button className="primary-button" onClick={onClose}>
+            Done
+          </button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}

@@ -1,10 +1,11 @@
 export type PaperStage = 'Prelims' | 'Final written' | 'Other-state'
-export type PaperStatus = 'Official' | 'Verified mirror' | 'Community scan' | 'Reference only'
+export type PaperStatus = 'Official' | 'Verified mirror' | 'Community scan' | 'Reference only' | 'Memory-based'
 export type InteractiveStatus = 'Ready' | 'In review' | 'PDF only'
 
 export type PreviousPaper = {
   id: string
-  state: 'Andhra Pradesh' | 'Kerala' | 'Rajasthan'
+  state: 'Andhra Pradesh' | 'Kerala' | 'Rajasthan' | 'National'
+  examId?: 'ap-si' | 'nicl-ao'
   year: number
   stage: PaperStage
   paper: string
@@ -22,6 +23,7 @@ export type PreviousPaper = {
   status: PaperStatus
   interactive: InteractiveStatus
   note?: string
+  options?: number
 }
 
 const careerPower = 'https://www.careerpower.in/ap-police-si-previous-year-question-papers.html'
@@ -32,14 +34,14 @@ export const previousPapers: PreviousPaper[] = [
   {
     id: 'ap-2023-prelims-1', state: 'Andhra Pradesh', year: 2023, stage: 'Prelims', paper: 'Paper I',
     subject: 'Arithmetic & reasoning', title: 'AP SI Preliminary Written Test — Paper I', examDate: '19 Feb 2023', questions: 100, minutes: 180,
-    languages: ['English', 'Telugu'], status: 'Verified mirror', interactive: 'In review',
+    languages: ['English', 'Telugu'], status: 'Verified mirror', interactive: 'Ready', booklet: 'A',
     paperUrl: 'https://www.careerpower.in/blog/wp-content/uploads/2025/08/13143909/AP-Police-SI-Prelims-Exam-Official-Paper-I-Held-On_-19-Feb-2023.pdf',
-    answerKeyUrl: 'https://img.freejobalert.com/uploads/2023/02/Final-Answer-Key-Paper-one-AP-Police-SI-Posts.pdf', sourceUrl: careerPower,
+    answerKeyUrl: 'https://slprb.ap.gov.in/PDFS/Paper-I_Final_Key_SI(PWT).pdf', sourceUrl: careerPower,
   },
   {
     id: 'ap-2023-prelims-2', state: 'Andhra Pradesh', year: 2023, stage: 'Prelims', paper: 'Paper II',
     subject: 'General Studies', title: 'AP SI Preliminary Written Test — Paper II', examDate: '19 Feb 2023', questions: 100, minutes: 180,
-    languages: ['English', 'Telugu'], status: 'Verified mirror', interactive: 'In review',
+    languages: ['English', 'Telugu'], status: 'Verified mirror', interactive: 'Ready', booklet: 'C',
     paperUrl: 'https://www.careerpower.in/blog/wp-content/uploads/2025/08/13143907/AP-Police-SI-Prelims-Exam-Official-Paper-II-Held-On_-19-Feb-2023_compressed.pdf',
     answerKeyUrl: 'https://slprb.ap.gov.in/PDFS/Paper-II_Final_Key_SI%28PWT%29.pdf', sourceUrl: careerPower,
   },
@@ -196,3 +198,31 @@ export const previousPapers: PreviousPaper[] = [
 
 export const apPapers = previousPapers.filter(paper => paper.state === 'Andhra Pradesh')
 export const otherStatePapers = previousPapers.filter(paper => paper.state !== 'Andhra Pradesh')
+
+// These are publisher reconstructions, not NICL-released question booklets.
+// Keep the publisher's source and full PDF intact instead of rewriting easier
+// questions and presenting those questions as previous-year papers.
+export const niclPapers: PreviousPaper[] = [
+  {
+    id: 'nicl-2025-prelims', examId: 'nicl-ao', state: 'National', year: 2025,
+    stage: 'Prelims', paper: 'Phase I', subject: 'English · Reasoning · Quantitative aptitude',
+    title: 'NICL AO Prelims 2025 — publisher reconstruction', examDate: '20 Jul 2025',
+    questions: 100, minutes: 60, languages: ['English'], options: 5,
+    status: 'Memory-based', interactive: 'Ready',
+    paperUrl: 'https://www.adda247.com/jobs/wp-content/uploads/2026/10/17145753/NICL-AO-Prelims-Memory-Based-Paper-20-July-2025.pdf',
+    answerKeyUrl: 'https://www.adda247.com/jobs/wp-content/uploads/2026/10/17145753/NICL-AO-Prelims-Memory-Based-Paper-20-July-2025.pdf',
+    sourceUrl: 'https://www.adda247.com/jobs/nicl-ao-previous-year-question-paper/',
+    note: 'Adda247 memory-based reconstruction, with publisher answers visible in the PDF. Not an official NICL paper or answer key. Section timers: English 20 min, Reasoning 20 min, Quantitative aptitude 20 min.',
+  },
+  {
+    id: 'nicl-2024-prelims', examId: 'nicl-ao', state: 'National', year: 2024,
+    stage: 'Prelims', paper: 'Phase I', subject: 'English · Reasoning · Quantitative aptitude',
+    title: 'NICL AO Prelims 2024 — publisher reconstruction', examDate: '04 Mar 2024',
+    questions: 100, minutes: 60, languages: ['English'], options: 5,
+    status: 'Memory-based', interactive: 'Ready',
+    paperUrl: 'https://www.bankersadda.com/wp-content/uploads/multisite/2025/06/17110211/NICL-AO-Prelims-2024-Memory-Based-Paper.pdf',
+    answerKeyUrl: 'https://www.bankersadda.com/wp-content/uploads/multisite/2025/06/17110211/NICL-AO-Prelims-2024-Memory-Based-Paper.pdf',
+    sourceUrl: 'https://www.adda247.com/jobs/nicl-ao-previous-year-question-paper/',
+    note: 'BankersAdda memory-based reconstruction. The answer sheet uses the publisher’s 100-answer key, not an official NICL key. Solutions remain visible in the source PDF. Each section is timed separately for 20 minutes.',
+  },
+]

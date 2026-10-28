@@ -7,7 +7,7 @@ import { expandedEnglishQuestions } from './questions/expandedEnglish'
 import { generatedQuantReasoningQuestions } from './questions/generatedQuantReasoning'
 import { quantQuestions } from './questions/quant'
 
-export type Subject = 'Arithmetic' | 'Reasoning' | 'General Studies' | 'AP Focus' | 'English'
+export type Subject = 'Arithmetic' | 'Reasoning' | 'General Studies' | 'AP Focus' | 'English' | 'General Awareness' | 'Computer Knowledge' | 'IT Professional Knowledge'
 
 export type Question = {
   id: string
