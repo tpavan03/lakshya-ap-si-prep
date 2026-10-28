@@ -49,9 +49,22 @@ jobs:
           umask 077
           mkdir -p "$HOME/.android"
           printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          printf '%s  %s\n' '7bac8c61299d4efa0388c1621228a8bb07d604de029c806c1c6f23c0037ee91d' "$HOME/.android/debug.keystore" | sha256sum --check --status
+          echo 'Persistent signing keystore checksum verified.'
       - run: npm ci
       - run: npm run lint
       - run: npm run android:apk
+      - name: Verify APK signing certificate
+        shell: bash
+        run: |
+          apk_path='android/app/build/outputs/apk/debug/app-debug.apk'
+          cert_report="$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk_path")"
+          cert_sha="$(printf '%s\n' "$cert_report" | awk '/Signer #1 certificate SHA-256 digest:/ { print $NF }')"
+          if [ "$cert_sha" != '265fa620c4cfef89986560ddd4c7c66c30237a91f4da91a432272c8208476117' ]; then
+            echo '::error::APK certificate differs from the published 2.0.0 APK. Refusing to upload an incompatible update.'
+            exit 1
+          fi
+          echo "APK signing certificate verified: $cert_sha"
       - uses: actions/upload-artifact@v4
         with:
           name: exam-prep-king-debug-apk

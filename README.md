@@ -49,7 +49,7 @@ The established `apsi-command:v1` local key and Supabase `user_state` table rema
 
 Writing drafts and active tests stay on the device. Account-scoped writing drafts prevent another signed-in candidate seeing them. Export before clearing browser data.
 
-**Backend verification on 28 October 2026:** after the existing Supabase project was resumed, auth health and settings returned **200**, with **Google and email enabled**. The progress endpoint currently returns **404 / PGRST205** (`public.user_state` unavailable in the schema cache). Check the existing project’s table and apply [`001_user_state.sql`](supabase/migrations/001_user_state.sql) if it is absent, or correct its schema exposure/cache if present. Authenticated progress save/reload and hosted RLS remain unverified until that endpoint is available. Device-only preparation and JSON backups work meanwhile. See [`docs/backend-verification.md`](docs/backend-verification.md) for the exact checks.
+**Backend verification on 28 October 2026:** the existing Supabase project is restored; refreshing PostgREST's cache made the existing table available without a migration. Auth health/settings return **200**, with Google and email enabled. Disposable authenticated users passed **insert, upsert and reload** for both exam namespaces, while cross-account reads/writes and anonymous writes were blocked. All test users and rows were removed. See [`docs/backend-verification.md`](docs/backend-verification.md) for exact results and the remaining OAuth/device verification limits.
 
 ## Android
 
@@ -67,4 +67,4 @@ The GitHub Android workflow uses repository variables `VITE_SUPABASE_URL` and `V
 
 Deployment targets the existing `lakshya-ap-si-prep` project and production domain. No replacement frontend or Supabase database is created. Direct deployment uses `npx vercel --prod --yes` from the linked checkout.
 
-Automatic deployment from GitHub additionally requires the `tpavan03` GitHub Login Connection in Vercel Account Settings → Authentication. Without it, `vercel git connect` returns a 400 and GitHub pushes alone do not redeploy. After connecting, link `tpavan03/lakshya-ap-si-prep` in the existing Vercel project’s Git settings.
+Automatic deployment from GitHub requires both a `tpavan03` Login Connection in Vercel and repository access through the Vercel GitHub app. The account connection is now accepted, but `vercel git connect` still reports missing repository access. Authorize the Vercel GitHub app for this repository, then link it in the existing Vercel project's Git settings. Current production has already been deployed directly; pushes alone will not redeploy until that repository connection succeeds.
