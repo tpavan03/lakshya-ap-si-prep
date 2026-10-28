@@ -618,7 +618,9 @@ function PaperCompanion({
         <ShieldCheck size={17} />
         <p>
           {nicl
-            ? "Publisher reconstruction, not an official NICL paper. Solutions are visible in the PDF. Grading uses the publisher key, with −0.25 per wrong answer."
+            ? key
+              ? "Publisher reconstruction, not an official NICL paper. Solutions are visible in the PDF. Grading uses the publisher key, with −0.25 per wrong answer."
+              : "Publisher reconstruction, not an official NICL paper. Solutions are visible in the PDF. Your answers are saved for manual review; no automatic score is calculated."
             : key
               ? `The complete scan stays unchanged. Grading uses ${key.label}. No negative marking.`
               : "Use the unchanged scan with this timed answer sheet. No matched booklet key is available: saved answers require manual review, without an automatic score."}

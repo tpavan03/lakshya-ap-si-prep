@@ -376,6 +376,9 @@ test("archive filters stay aligned on phone and desktop and the 2017 paper uses 
     .getByRole("button", { name: "Attempt paper", exact: true })
     .click();
   await expect(page.getByText(/One composite timer/)).toBeVisible();
+  await expect(
+    page.getByText(/no automatic score is calculated/),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Start timed attempt", exact: false })
     .click();

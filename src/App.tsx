@@ -315,7 +315,7 @@ export default function App() {
       >
         <Settings2 size={18} /> Profile & backup
       </button>
-      <small className="sidebar-version">EXAM PREP KING / 2.0.1</small>
+      <small className="sidebar-version">EXAM PREP KING / 2.0.2</small>
     </>
   );
   return (
