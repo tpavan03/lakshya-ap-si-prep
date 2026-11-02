@@ -1,0 +1,380 @@
+{
+  "schema": 1,
+  "repository": "tpavan03/lakshya-ap-si-prep",
+  "timezone": "Asia/Kolkata",
+  "start_date": "2026-11-03",
+  "days": 90,
+  "interval_days": 2,
+  "rotation_size": 3,
+  "rotation_index": 1,
+  "tasks": [
+    {
+      "id": "choose-exam-stage-and-stream",
+      "title": "Choose the exam, stage and NICL stream",
+      "path": "docs/handbook/choose-exam-stage-and-stream.md",
+      "body": "# Choose the exam, stage and NICL stream\n\nStart by selecting the target exam, then its Prelims or Mains stage. NICL also distinguishes Generalist and Information Technology streams. These choices determine the available paper blueprints and question pools; a familiar page layout does not mean every paper has the same structure.\n\nCheck the paper title, subjects, question count and timing before launching a simulation. Change the exam selection before building a practice set if you intend to prepare for a different examination. Attempts retain their exam and stream identity so the performance view can show the relevant history.\n\nThis guide describes the application's current configuration. It is not a new recruitment notification. Use the sourced exam notes and the relevant official notice when checking current eligibility, dates or rule changes; do not infer those from a previously saved mock attempt.\n\n## Implementation references\n\n- [src/lib/examEngine.ts](../../src/lib/examEngine.ts)\n- [src/components/ExamPages.tsx](../../src/components/ExamPages.tsx)\n",
+      "evidence": [
+        {
+          "path": "src/lib/examEngine.ts",
+          "contains": [
+            "export type ExamId",
+            "export type Stage",
+            "export type Stream",
+            "getBlueprints"
+          ]
+        },
+        {
+          "path": "src/components/ExamPages.tsx",
+          "contains": [
+            "StageTabs",
+            "getBlueprints(examId, stage, stream)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "browse-numbered-test-series",
+      "title": "Browse the numbered mock-test series",
+      "path": "docs/handbook/browse-numbered-test-series.md",
+      "body": "# Browse the numbered mock-test series\n\nOpen Tests after choosing the exam, stage and stream. Select the intended paper and browse the numbered test cards. The series uses visible cards and pagination rather than hiding the whole selection behind one edition dropdown.\n\nA completed marker refers to a recorded attempt for that edition. It does not certify that a paper is an official previous-year booklet, and it does not mean another numbered simulation contains an entirely unrelated question family. The practice bank includes disclosed generated variants.\n\nPreview the chosen test's paper information before starting. If a saved test is already active, resume or submit that attempt before launching another. This protects the answer sheet from being replaced by an accidental second start. Use custom practice for a shorter targeted set instead of treating a full-paper card as a topic quiz.\n\n## Implementation references\n\n- [src/components/ExamPages.tsx](../../src/components/ExamPages.tsx)\n- [src/App.tsx](../../src/App.tsx)\n",
+      "evidence": [
+        {
+          "path": "src/components/ExamPages.tsx",
+          "contains": [
+            "testsPerPage = 6",
+            "const firstTest",
+            "const prepare"
+          ]
+        },
+        {
+          "path": "src/App.tsx",
+          "contains": [
+            "Resume or submit your saved test before starting another one."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "section-clocks-and-reloads",
+      "title": "Understand section clocks and reload recovery",
+      "path": "docs/handbook/section-clocks-and-reloads.md",
+      "body": "# Understand section clocks and reload recovery\n\nA timed simulation uses its saved start and section deadlines. Reloading a page does not grant a fresh time allowance. In a section-timed test, only the current allowed question IDs can be answered or navigated to; a visible future section label is not permission to enter it early.\n\nUse the runner's displayed time remaining and section indicators. An inactive browser tab may delay visual updates, but that does not make elapsed wall-clock time disappear. When the clock has finished, the runner submits the current answer state.\n\nSave and resume are recovery features, not a pause button for the simulated exam clock. If you want an interrupted, less formal session, choose a suitable custom practice setup before starting. Test configuration and recorded timestamps explain a restored attempt more reliably than the browser's last displayed counter.\n\n## Implementation references\n\n- [src/components/TestRunner.tsx](../../src/components/TestRunner.tsx)\n- [src/lib/examEngine.ts](../../src/lib/examEngine.ts)\n",
+      "evidence": [
+        {
+          "path": "src/components/TestRunner.tsx",
+          "contains": [
+            "getQuizClock",
+            "clock.allowedItemIds",
+            "clock.sectionRemainingSeconds",
+            "if (getQuizClock(quiz).isFinished) finish()"
+          ]
+        },
+        {
+          "path": "src/lib/examEngine.ts",
+          "contains": [
+            "sectionalTiming",
+            "getQuizClock"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "answer-review-and-submit",
+      "title": "Use answer clearing, review flags and submission",
+      "path": "docs/handbook/answer-review-and-submit.md",
+      "body": "# Use answer clearing, review flags and submission\n\nSelecting an option records an answer for the current allowed question. Clearing the answer removes that selection; marking a question for review is a separate action. A review flag is a reminder, not a second answer or a guarantee that the question will remain accessible after its timed section ends.\n\nBefore submitting, compare answered and unanswered counts with the question navigation. Avoid assuming that simply visiting a question records a response. The runner protects submission against duplicate completion callbacks.\n\n**Save & exit** first attempts to store the active sheet. If storage fails, the runner displays an error and keeps the test open instead of pretending that recovery is safe. Follow that message and submit or protect your data before clearing browser storage. Closing the tab without a successful save is not a reliable backup method.\n\n## Implementation references\n\n- [src/components/TestRunner.tsx](../../src/components/TestRunner.tsx)\n",
+      "evidence": [
+        {
+          "path": "src/components/TestRunner.tsx",
+          "contains": [
+            "const clearAnswer",
+            "const toggleMark",
+            "submitted.current",
+            "Save & exit",
+            "storageError"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "read-objective-scores",
+      "title": "Read objective scores and unanswered questions",
+      "path": "docs/handbook/read-objective-scores.md",
+      "body": "# Read objective scores and unanswered questions\n\nThe runner displays the configured marks for correct and wrong answers before you complete a paper. Those values belong to that quiz blueprint. Do not apply another exam's negative-marking assumption simply because both use multiple-choice questions.\n\nThe scoring engine records question reviews and section-level results alongside the attempt. Unanswered questions are distinct from wrong responses. A review flag does not itself change the mark calculation. Inspect the submitted review to understand which recorded answers contributed to the score.\n\nApplication scores describe a practice attempt, not an official result, selection probability or fabricated rank. When investigating an unexpected total, check the paper identity, configured marking values and answer sheet first. A manual paper without a matched key follows a different review path and must not be compared as though an official answer key had been verified.\n\n## Implementation references\n\n- [src/lib/examEngine.ts](../../src/lib/examEngine.ts)\n- [src/components/TestRunner.tsx](../../src/components/TestRunner.tsx)\n",
+      "evidence": [
+        {
+          "path": "src/lib/examEngine.ts",
+          "contains": [
+            "scoreQuiz",
+            "negativeMark",
+            "marksPerCorrect",
+            "QuestionReview"
+          ]
+        },
+        {
+          "path": "src/components/TestRunner.tsx",
+          "contains": [
+            "correct",
+            "wrong"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "build-custom-practice",
+      "title": "Build a focused custom practice session",
+      "path": "docs/handbook/build-custom-practice.md",
+      "body": "# Build a focused custom practice session\n\nUse Custom practice to choose subjects, a topic, difficulty, question count and time. This creates a targeted exercise rather than silently changing the pattern of a full-paper simulation. Check the available question pool after applying several filters; a very narrow combination can leave too few eligible items.\n\nStart with a specific learning aim, such as revisiting a weak subject or working on a difficult topic. Change one or two settings deliberately so the later attempt is interpretable. A short custom set should not be mistaken for full coverage of an exam stage.\n\nSaved-question and mistake sources further restrict the pool to your own recorded selections or history. If the pool is empty, broaden the filters or first build relevant history. The engine should report insufficient coverage rather than quietly filling a strict exam simulation with unrelated subjects.\n\n## Implementation references\n\n- [src/components/ExamPages.tsx](../../src/components/ExamPages.tsx)\n- [src/lib/examEngine.ts](../../src/lib/examEngine.ts)\n",
+      "evidence": [
+        {
+          "path": "src/components/ExamPages.tsx",
+          "contains": [
+            "export function Practice",
+            "My mistakes",
+            "Saved questions"
+          ]
+        },
+        {
+          "path": "src/lib/examEngine.ts",
+          "contains": [
+            "BankCoverageError"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "saved-questions-and-mistakes",
+      "title": "Turn saved questions and mistakes into revision",
+      "path": "docs/handbook/saved-questions-and-mistakes.md",
+      "body": "# Turn saved questions and mistakes into revision\n\nSaving a question creates a deliberate revision collection. Mistake practice is built from recorded attempts. These are different sources: a saved question can be one you answered correctly, while a wrong answer does not necessarily mean you manually saved it.\n\nOpen Custom practice and select the intended source, then check the subject and difficulty filters. The displayed collection count and the current filtered pool can differ. Clear narrow filters before assuming that a saved item has disappeared.\n\nUse the explanation after a session to identify why the response was wrong, then return to the linked learning material for the underlying topic. Repeating an already memorized option is weaker evidence of understanding than explaining the method. The app tracks the recorded attempt; it does not infer that a previously missed concept has been permanently mastered.\n\n## Implementation references\n\n- [src/components/ExamPages.tsx](../../src/components/ExamPages.tsx)\n- [src/lib/store.ts](../../src/lib/store.ts)\n",
+      "evidence": [
+        {
+          "path": "src/components/ExamPages.tsx",
+          "contains": [
+            "mistakes = new Set",
+            "progress.saved.includes",
+            "Save question",
+            "My mistakes"
+          ]
+        },
+        {
+          "path": "src/lib/store.ts",
+          "contains": [
+            "saved"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-provenance-before-practice",
+      "title": "Check paper provenance before starting a PYQ",
+      "path": "docs/handbook/paper-provenance-before-practice.md",
+      "body": "# Check paper provenance before starting a PYQ\n\nRead the archive's source and provenance labels before treating a PDF as an original booklet. Official scans, publisher reconstructions, memory-based papers and source indexes are different evidence types. A historical year alone does not establish official provenance.\n\nCheck whether the answer key is matched to that particular booklet. Without a matching key, the application may provide a timed answer sheet and manual review rather than inventing an objective score. A publisher reconstruction can also contain visible solutions in its source PDF.\n\nUse full simulations in Tests when you want a closed-answer experience built from the editorial question bank. That bank is practice content, not a claim that its questions appeared in the historical exam. If a source link or key changes, update the provenance record and validator together instead of merely relabelling the paper as original.\n\n## Implementation references\n\n- [docs/paper-provenance.md](../../docs/paper-provenance.md)\n- [src/components/PaperArchive.tsx](../../src/components/PaperArchive.tsx)\n- [scripts/validate-pyq-catalog.ts](../../scripts/validate-pyq-catalog.ts)\n",
+      "evidence": [
+        {
+          "path": "docs/paper-provenance.md",
+          "contains": [
+            "NICL",
+            "2017"
+          ]
+        },
+        {
+          "path": "src/components/PaperArchive.tsx",
+          "contains": [
+            "PDF"
+          ]
+        },
+        {
+          "path": "scripts/validate-pyq-catalog.ts",
+          "contains": [
+            "import"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-attempts-and-manual-review",
+      "title": "Distinguish keyed paper attempts from manual review",
+      "path": "docs/handbook/paper-attempts-and-manual-review.md",
+      "body": "# Distinguish keyed paper attempts from manual review\n\nThe paper archive and the editorial test series use different content paths. In the archive, the PDF is the source artifact and the answer sheet is tied to that paper's metadata. Verify the year and booklet before entering answers.\n\nA keyed attempt needs a validated match between the source paper and its answer key. Manual review is appropriate when that match is unavailable; it should not produce a convincing-looking automated score from guessed answers. Compare the archive's provenance notes with the attempt mode rather than assuming that every Start action has the same scoring support.\n\nKeep your source PDF accessible when reviewing. Some reconstructions include their own solutions, which limits their usefulness as a closed-answer mock. If the goal is a clean timed simulation, use Tests and review its clearly labelled editorial status instead.\n\n## Implementation references\n\n- [src/lib/paperAttempt.ts](../../src/lib/paperAttempt.ts)\n- [src/components/PaperArchive.tsx](../../src/components/PaperArchive.tsx)\n- [docs/paper-provenance.md](../../docs/paper-provenance.md)\n",
+      "evidence": [
+        {
+          "path": "src/lib/paperAttempt.ts",
+          "contains": [
+            "export",
+            "key"
+          ]
+        },
+        {
+          "path": "src/components/PaperArchive.tsx",
+          "contains": [
+            "PaperArchive"
+          ]
+        },
+        {
+          "path": "docs/paper-provenance.md",
+          "contains": [
+            "manual"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "descriptive-writing-drafts",
+      "title": "Use descriptive writing without losing drafts",
+      "path": "docs/handbook/descriptive-writing-drafts.md",
+      "body": "# Use descriptive writing without losing drafts\n\nThe writing desk is separate from objective scoring. Open the descriptive task for the relevant stage, read the prompt and work within the displayed practice time. An essay or precis draft is not automatically evaluated as an official qualifying result.\n\nWriting drafts stay on the device and are scoped to the active account. A different signed-in candidate should not inherit another account's draft. Exporting general exam progress is not a reason to assume every active writing buffer has become a portable cloud document.\n\nBefore clearing site data or changing devices, preserve important writing elsewhere. Verify the account and selected task if an expected draft does not appear. Resume the appropriate draft rather than pasting an unrelated response over it. The application supports practice and continuity, while an actual examiner's marking process remains outside the app.\n\n## Implementation references\n\n- [src/components/WritingDesk.tsx](../../src/components/WritingDesk.tsx)\n- [src/lib/writingDraft.ts](../../src/lib/writingDraft.ts)\n- [README.md](../../README.md)\n",
+      "evidence": [
+        {
+          "path": "src/components/WritingDesk.tsx",
+          "contains": [
+            "WritingDesk"
+          ]
+        },
+        {
+          "path": "src/lib/writingDraft.ts",
+          "contains": [
+            "export",
+            "storageScope",
+            "encodeURIComponent"
+          ]
+        },
+        {
+          "path": "README.md",
+          "contains": [
+            "Writing drafts and active tests stay on the device."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "account-sync-and-device-mode",
+      "title": "Separate account sync from device-only progress",
+      "path": "docs/handbook/account-sync-and-device-mode.md",
+      "body": "# Separate account sync from device-only progress\n\nThe app can hold progress locally, and configured deployments also support a signed-in cloud account. The current account owner matters: a local cache from one candidate must not be uploaded into another candidate's history just because both use the same browser.\n\nDuring sign-in, the sync layer hydrates the account state before allowing ordinary uploads. Writes are serialized and guarded against stale account generations. If a network request finishes after an account switch, its old ownership must not be treated as current.\n\nRead the visible sync status before relying on another device to contain the latest attempt. Keep a JSON export before recovery work or browser cleanup. Device-only use is useful for exploration, but it is not evidence of a completed cloud backup. Never place a Supabase service-role credential in browser configuration to work around an account error.\n\n## Implementation references\n\n- [src/hooks/useCloudSync.ts](../../src/hooks/useCloudSync.ts)\n- [src/hooks/cloudSyncPolicy.ts](../../src/hooks/cloudSyncPolicy.ts)\n- [README.md](../../README.md)\n",
+      "evidence": [
+        {
+          "path": "src/hooks/useCloudSync.ts",
+          "contains": [
+            "CloudSessionGuard",
+            "writes",
+            "hydrated"
+          ]
+        },
+        {
+          "path": "src/hooks/cloudSyncPolicy.ts",
+          "contains": [
+            "CloudSessionGuard"
+          ]
+        },
+        {
+          "path": "README.md",
+          "contains": [
+            "Explore on this device"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "export-and-restore-progress",
+      "title": "Export and restore both exam histories",
+      "path": "docs/handbook/export-and-restore-progress.md",
+      "body": "# Export and restore both exam histories\n\nOpen **Profile & backup** and choose **Export JSON** to keep a portable copy. The export includes the supported exam histories, attempts and saved questions. Keep the complete file instead of copying only the summary visible on screen.\n\nTo recover a saved export, choose **Import backup**, review its contents and confirm the intended replacement. Export the current destination state first if it contains progress you may still need. Import is a deliberate recovery action, not an automatic merge of every record from two histories.\n\nEarlier Lakshya progress has a compatibility path, but a familiar filename does not prove that arbitrary JSON is valid. The import path validates the format and size. Active tests and writing drafts have their own device storage behavior, so preserve them separately before clearing data or moving to a new device.\n\n## Implementation references\n\n- [src/App.tsx](../../src/App.tsx)\n- [src/lib/store.ts](../../src/lib/store.ts)\n",
+      "evidence": [
+        {
+          "path": "src/App.tsx",
+          "contains": [
+            "Profile & backup",
+            "Export JSON",
+            "Import backup",
+            "Replace with backup"
+          ]
+        },
+        {
+          "path": "src/lib/store.ts",
+          "contains": [
+            "apsi-command:v1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "performance-review-with-context",
+      "title": "Review performance in the correct exam context",
+      "path": "docs/handbook/performance-review-with-context.md",
+      "body": "# Review performance in the correct exam context\n\nOpen Performance after completing attempts and select the relevant exam, stage and stream. Compare like-for-like sessions: a short easy practice set and a full timed simulation do not provide equivalent evidence simply because both show a percentage.\n\nUse subject-level rows and the question review to distinguish accuracy, unanswered items and timing. A low total can have different causes, including knowledge gaps, deliberate skips or a section clock expiring. Read those causes before turning the result into a revision plan.\n\nThe mistake-practice shortcut is a practical follow-up for recorded wrong answers. Pair it with learning material when the method remains unclear. These reports describe your saved practice history; they do not generate official cutoffs, ranks or guaranteed readiness for an upcoming exam. Missing history should first be investigated as a selection, account or restore issue.\n\n## Implementation references\n\n- [src/components/ExamPages.tsx](../../src/components/ExamPages.tsx)\n- [src/lib/examEngine.ts](../../src/lib/examEngine.ts)\n",
+      "evidence": [
+        {
+          "path": "src/components/ExamPages.tsx",
+          "contains": [
+            "export function Performance",
+            "progress.attempts.filter",
+            "Practise mistakes"
+          ]
+        },
+        {
+          "path": "src/lib/examEngine.ts",
+          "contains": [
+            "QuestionReview",
+            "ScoreRow"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "learning-chapters-and-sources",
+      "title": "Use learning chapters alongside timed practice",
+      "path": "docs/handbook/learning-chapters-and-sources.md",
+      "body": "# Use learning chapters alongside timed practice\n\nLearn provides topic material selected for the active exam. The AP and NICL chapter collections are separate, so confirm the exam context before looking for a particular chapter. Use the explanations to build a method, then test that method in a suitable practice session.\n\nSources attached to study topics are references, not a promise that every linked page is permanently available or that every fact remains current. Recruitment rules and current-affairs facts require fresh primary-source checks when updating content.\n\nWhen adding a chapter, keep its topic identity consistent with the question bank and the exam selector. A polished heading does not establish syllabus coverage. Review the source list and test that the chapter is reachable through the intended exam and stage. Keep explanatory prose distinct from claims about original historical question papers.\n\n## Implementation references\n\n- [src/components/ExamPages.tsx](../../src/components/ExamPages.tsx)\n- [src/theory.ts](../../src/theory.ts)\n- [src/niclTheory.ts](../../src/niclTheory.ts)\n",
+      "evidence": [
+        {
+          "path": "src/components/ExamPages.tsx",
+          "contains": [
+            "export function Learn",
+            "niclTheoryChapters"
+          ]
+        },
+        {
+          "path": "src/theory.ts",
+          "contains": [
+            "export"
+          ]
+        },
+        {
+          "path": "src/niclTheory.ts",
+          "contains": [
+            "niclTheoryChapters"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validate-editorial-question-changes",
+      "title": "Validate editorial question and archive changes",
+      "path": "docs/handbook/validate-editorial-question-changes.md",
+      "body": "# Validate editorial question and archive changes\n\nQuestions and historical-paper metadata need different checks. After editing the bank, run the bank validator and unit tests. After changing an archive source or key, run the paper validator as well. A TypeScript build alone does not establish that an answer is correct or that a PDF is an original booklet.\n\nUse the existing commands from the repository root:\n\n```bash\nnpm run validate:bank\nnpm run validate:papers\nnpm test\nnpm run build\n```\n\nReview the explanation, option ordering, answer index, exam identity and duplicated question families. For paper keys, verify the booklet-specific source and any amendments before changing a scored attempt. Browser tests cover interaction and timer behavior, while editorial review establishes content quality. Preserve that distinction in release notes and future source claims.\n\n## Implementation references\n\n- [package.json](../../package.json)\n- [scripts/validate-question-bank.ts](../../scripts/validate-question-bank.ts)\n- [scripts/validate-pyq-catalog.ts](../../scripts/validate-pyq-catalog.ts)\n",
+      "evidence": [
+        {
+          "path": "package.json",
+          "contains": [
+            "validate:bank",
+            "validate:papers",
+            "npm"
+          ]
+        },
+        {
+          "path": "scripts/validate-question-bank.ts",
+          "contains": [
+            "import"
+          ]
+        },
+        {
+          "path": "scripts/validate-pyq-catalog.ts",
+          "contains": [
+            "import"
+          ]
+        }
+      ]
+    }
+  ]
+}
