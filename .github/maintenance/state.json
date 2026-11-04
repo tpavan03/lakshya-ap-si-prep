@@ -1,4 +1,12 @@
 {
   "schema": 1,
-  "completed": []
+  "completed": [
+    {
+      "id": "choose-exam-stage-and-stream",
+      "slot": 1,
+      "published_date": "2026-11-05",
+      "published_at": "2026-11-04T21:21:35.655681+00:00",
+      "source_commit": "8f4d37b4dd4353223dc109d45071b42b9be538bc"
+    }
+  ]
 }
