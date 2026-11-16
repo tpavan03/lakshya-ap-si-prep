@@ -3,13 +3,13 @@
 Source-checked guides for the current project. See [the maintenance campaign](../maintenance-campaign.md) for the schedule, scope and stop controls.
 
 <!-- maintenance:begin -->
-Published guides: **2 / 15**.
+Published guides: **3 / 15**.
 
 | Guide | Status |
 | --- | --- |
 | [Choose the exam, stage and NICL stream](choose-exam-stage-and-stream.md) | Published 2026-11-05 |
 | [Browse the numbered mock-test series](browse-numbered-test-series.md) | Published 2026-11-11 |
-| Understand section clocks and reload recovery | Queued |
+| [Understand section clocks and reload recovery](section-clocks-and-reloads.md) | Published 2026-11-17 |
 | Use answer clearing, review flags and submission | Queued |
 | Read objective scores and unanswered questions | Queued |
 | Build a focused custom practice session | Queued |

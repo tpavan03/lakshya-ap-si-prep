@@ -14,6 +14,13 @@
       "published_date": "2026-11-11",
       "published_at": "2026-11-10T21:20:43.714298+00:00",
       "source_commit": "2e35146c081f0648b984b6078556acaa675f2f0a"
+    },
+    {
+      "id": "section-clocks-and-reloads",
+      "slot": 7,
+      "published_date": "2026-11-17",
+      "published_at": "2026-11-16T23:45:51.653907+00:00",
+      "source_commit": "6f7b19108c67ec938e0e9681082080bb4d94e868"
     }
   ]
 }
