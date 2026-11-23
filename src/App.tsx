@@ -476,7 +476,15 @@ export default function App() {
           )}{" "}
           {view === "reports" &&
             (report ? (
-              <AttemptReport attempt={report} onClose={() => setReport(null)} />
+              <AttemptReport
+                attempt={report}
+                onClose={() => setReport(null)}
+                history={progress.attempts}
+                category={store.profile.category}
+                bank={bank}
+                stream={stream}
+                onStart={begin}
+              />
             ) : (
               <Performance
                 progress={progress}

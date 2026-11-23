@@ -144,6 +144,8 @@ function normalizeAttempt(
     marksPerCorrect: Math.max(0, finite(value.marksPerCorrect, 1)),
     subjects,
     sections: object(value.sections) as Record<string, ScoreRow>,
+    ...(finite(value.minutes) > 0 ? { minutes: finite(value.minutes) } : {}),
+    ...(Array.isArray(value.marked) ? { marked: strings(value.marked) } : {}),
     review: Array.isArray(value.review)
       ? (value.review.filter((item) => {
           const row = object(item),

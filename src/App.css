@@ -1014,7 +1014,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  color: #657b9c;
+  color: var(--muted);
   font-size: 9px;
   line-height: 1.6;
   margin-bottom: 16px;
@@ -1058,7 +1058,7 @@
   display: block;
   font-size: 8px;
   margin-top: 13px;
-  color: #7183a0;
+  color: var(--muted);
 }
 .solution {
   border: 1px solid #d8e8dd;
@@ -2869,5 +2869,213 @@
   }
   .results-count {
     font-size: 11px;
+  }
+}
+
+/* Post-test analysis (AttemptReport) */
+.analysis-block {
+  margin-bottom: 20px;
+}
+.analysis-block h2 {
+  margin: 0 0 14px;
+}
+.analysis-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.analysis-facts div {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.analysis-facts dt {
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.analysis-facts dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.analysis-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 10px 0 0;
+}
+.analysis-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 12px 0 0;
+}
+.analysis-subject h3 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 15px;
+  margin: 18px 0 6px;
+}
+.analysis-subject h3 span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.topic-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.topic-rows li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.topic-rows li:last-child {
+  border-bottom: 0;
+}
+.topic-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.topic-rows small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 6px;
+}
+.meter {
+  height: 6px;
+  border-radius: 6px;
+  background: #eaf0f9;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.meter span {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 6px;
+}
+.analysis-buckets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.analysis-buckets li {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+.analysis-buckets b {
+  font:
+    600 26px Outfit,
+    sans-serif;
+  color: var(--ink);
+}
+.analysis-buckets small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.trend-bars {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 140px;
+}
+.trend-bars li {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.trend-bar {
+  width: 100%;
+  max-width: 44px;
+  background: #c9d7f5;
+  border-radius: 6px 6px 0 0;
+}
+.trend-bars li.current .trend-bar {
+  background: var(--primary);
+}
+.trend-bars li.current small:first-of-type {
+  color: var(--ink);
+  font-weight: 700;
+}
+.action-plan {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.action-plan li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.action-plan p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+.review-filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.review-timing {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 4px 0 0;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 700px) {
+  .action-plan li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .action-plan .secondary-button {
+    justify-content: center;
+  }
+  .trend-bars {
+    gap: 6px;
+  }
+  .review-filter-fields,
+  .review-filter-fields label,
+  .review-filter-fields select {
+    width: 100%;
   }
 }

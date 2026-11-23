@@ -78,6 +78,53 @@ test("custom practice records marks, review, mistakes and separate exam progress
   ).toBeVisible();
 });
 
+test("the report analyses a submitted test on a phone and starts targeted practice", async ({
+  page,
+}) => {
+  await enter(page, "?exam=ap-si&view=practice");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Questions", { exact: true }).fill("4");
+  await page.getByRole("button", { name: "Start custom test" }).click();
+  const runner = page.getByRole("dialog").first();
+  await expect(runner.getByText("QUESTION 1", { exact: false })).toBeVisible();
+  await runner
+    .getByRole("group", { name: "Answer options" })
+    .getByRole("button")
+    .last()
+    .click();
+  await runner
+    .getByRole("button", { name: "Submit test", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Submit & view results" }).click();
+  for (const name of [
+    "Summary",
+    "Subject and topic breakdown",
+    "Difficulty breakdown",
+    "Action plan",
+    "Review every question",
+  ])
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(page.getByText("Readiness benchmark", { exact: false })).toBeVisible();
+  await expect(page.getByLabel("Show")).toBeVisible();
+  await expect(page.getByText(/Your time \d+s · target \d+s/).first()).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    ),
+  ).toBe(true);
+  const results = await new AxeBuilder({ page })
+    .include("main")
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze();
+  expect(
+    results.violations.filter((v) => ["serious", "critical"].includes(v.impact ?? "")),
+  ).toEqual([]);
+  await page.getByRole("button", { name: "Retry missed questions" }).click();
+  await expect(
+    page.getByRole("dialog").first().getByText("QUESTION 1", { exact: false }),
+  ).toBeVisible();
+});
+
 test("Google sign-in stays on the app when cloud health is unavailable and guest access works", async ({
   page,
 }) => {

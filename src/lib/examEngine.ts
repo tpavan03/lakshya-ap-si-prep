@@ -97,6 +97,10 @@ export type Attempt = {
   subjects: Record<string, ScoreRow>;
   sections: Record<string, ScoreRow>;
   review: QuestionReview[];
+  /** Time allowed (added in 2.2; absent on older attempts). */
+  minutes?: number;
+  /** Ids marked for review when the attempt was submitted (added in 2.2). */
+  marked?: string[];
 };
 
 const apPaper = (
@@ -813,5 +817,9 @@ export function scoreQuiz(
     subjects,
     sections,
     review,
+    minutes: quiz.minutes,
+    marked: (quiz.marked ?? []).filter((id) =>
+      quiz.items.some((q) => q.id === id),
+    ),
   };
 }

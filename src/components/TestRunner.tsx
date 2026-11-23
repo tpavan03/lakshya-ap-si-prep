@@ -1,5 +1,5 @@
 import { fmt, time } from "../lib/format";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -10,11 +10,26 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
+import type { Question } from "../data";
+import { readinessBenchmarks } from "../exam";
 import {
+  analyseAttempt,
+  CARELESS_FACTOR,
+  isCareless,
+  isTimeSink,
+  reviewTopic,
+  STRONG_ACCURACY,
+  TIME_SINK_FACTOR,
+  WEAK_ACCURACY,
+} from "../lib/attemptAnalysis";
+import {
+  createPracticeQuiz,
+  EXAMS,
   getQuizClock,
   scoreQuiz,
   type Attempt,
   type Quiz,
+  type Stream,
 } from "../lib/examEngine";
 import { ACTIVE_QUIZ_KEY } from "../lib/store";
 import { canonicalTopicFor } from "../topicTaxonomy";
@@ -52,15 +67,20 @@ export function TestRunner({
         ),
     item = quiz.items[effectiveIndex],
     section = quiz.sections[clock.currentSectionIndex];
-  const live = useRef({ answers, seconds });
+  const live = useRef({ answers, seconds, marked });
   useEffect(() => {
-    live.current = { answers, seconds };
-  }, [answers, seconds]);
+    live.current = { answers, seconds, marked };
+  }, [answers, seconds, marked]);
   const finish = useCallback(() => {
     if (submitted.current) return;
     submitted.current = true;
     onSubmit(
-      scoreQuiz(quiz, live.current.answers, live.current.seconds, Date.now()),
+      scoreQuiz(
+        { ...quiz, marked: live.current.marked },
+        live.current.answers,
+        live.current.seconds,
+        Date.now(),
+      ),
     );
   }, [onSubmit, quiz]);
   useEffect(() => {
@@ -351,13 +371,98 @@ export function TestRunner({
 export function AttemptReport({
   attempt: a,
   onClose,
+  history = [],
+  category,
+  bank = [],
+  stream,
+  onStart,
 }: {
   attempt: Attempt;
   onClose: () => void;
+  /** Saved attempts of the same exam, for the same-paper trend. */
+  history?: readonly Attempt[];
+  /** Profile category, for the app's own AP SI readiness benchmark. */
+  category?: string;
+  /** Current question bank, for one-tap topic practice. */
+  bank?: readonly Question[];
+  stream?: Stream;
+  onStart?: (quiz: Quiz) => void;
 }) {
+  const analysis = useMemo(() => analyseAttempt(a, history), [a, history]);
+  const { summary, subjects, time: timing, difficulty, trend, plan } = analysis;
   const [filter, setFilter] = useState("all"),
+    [topicFilter, setTopicFilter] = useState("all"),
     [limit, setLimit] = useState(15),
-    items = a.review.filter((r) => filter === "all" || r.result === filter);
+    [planError, setPlanError] = useState("");
+  const marked = new Set(a.marked ?? []);
+  const topicsInAttempt = [
+    ...new Set(a.review.map((r) => reviewTopic(a, r))),
+  ].sort();
+  const items = a.review.filter(
+    (r) =>
+      (filter === "all" ||
+        (filter === "timesink"
+          ? isTimeSink(r)
+          : filter === "careless"
+            ? isCareless(r)
+            : filter === "marked"
+              ? marked.has(r.question.id)
+              : r.result === filter)) &&
+      (topicFilter === "all" || reviewTopic(a, r) === topicFilter),
+  );
+  const benchmark =
+    a.examId === "ap-si" && category ? readinessBenchmarks[category] : undefined;
+  const startTopic = (subject: string, topic: string) => {
+    setPlanError("");
+    try {
+      const pool = bank.filter(
+        (q) => q.subject === subject && canonicalTopicFor(a.examId, q) === topic,
+      );
+      onStart?.(
+        createPracticeQuiz({
+          examId: a.examId,
+          stream,
+          pool,
+          count: Math.min(20, pool.length),
+          minutes: 25,
+          title: `${EXAMS[a.examId].shortName} · ${topic} drill`,
+        }),
+      );
+    } catch (e) {
+      setPlanError((e as Error).message);
+    }
+  };
+  const retry = (ids: string[]) => {
+    setPlanError("");
+    try {
+      const pool = a.review
+        .map((r) => r.question)
+        .filter((q) => ids.includes(q.id));
+      onStart?.(
+        createPracticeQuiz({
+          examId: a.examId,
+          stream,
+          pool,
+          questionIds: ids,
+          count: pool.length,
+          minutes: Math.max(
+            5,
+            Math.ceil(pool.reduce((s, q) => s + (q.seconds || 60), 0) / 60),
+          ),
+          title: `${EXAMS[a.examId].shortName} · Retry missed questions`,
+        }),
+      );
+    } catch (e) {
+      setPlanError((e as Error).message);
+    }
+  };
+  const tagClass = (tag: string) =>
+    tag === "Strong" ? "correct" : tag === "Weak" ? "wrong" : "medium";
+  const maxTrend = trend
+    ? Math.max(...trend.points.map((p) => p.maxMarks), 1)
+    : 1;
+  const signed = (n: number, unit = "") =>
+    `${n > 0 ? "+" : n < 0 ? "−" : "±"}${fmt(Math.abs(n))}${unit}`;
   return (
     <>
       <PageHead
@@ -370,7 +475,7 @@ export function AttemptReport({
           </button>
         }
       />
-      <section className="report-summary">
+      <section className="report-summary" aria-label="Score summary">
         <div className="report-mark">
           <span>NET MARKS</span>
           <strong>
@@ -399,37 +504,283 @@ export function AttemptReport({
           <span>Unanswered</span>
         </div>
       </section>
-      <section className="panel report-sections">
-        <h2>Section breakdown</h2>
-        {Object.entries(a.subjects).map(([subject, s]) => (
-          <div className="report-subject" key={subject}>
-            <strong>{subject}</strong>
-            <span>
-              {s.correct} correct · {s.wrong} wrong · {s.unanswered} blank
-            </span>
-            <b>
-              {fmt(s.score)} / {s.total * a.marksPerCorrect}
-            </b>
+      <section className="panel analysis-block" aria-labelledby="summary-h">
+        <h2 id="summary-h">Summary</h2>
+        <dl className="analysis-facts">
+          <div>
+            <dt>Score</dt>
+            <dd>
+              {fmt(summary.score)} / {summary.maxMarks} ({summary.scorePercent}%)
+            </dd>
           </div>
-        ))}
+          <div>
+            <dt>Accuracy</dt>
+            <dd>{summary.accuracy}% of attempted</dd>
+          </div>
+          <div>
+            <dt>Attempted</dt>
+            <dd>
+              {summary.attempted} of {summary.total} · {summary.skipped} skipped
+            </dd>
+          </div>
+          <div>
+            <dt>Time used</dt>
+            <dd>
+              {time(summary.secondsUsed)}
+              {summary.secondsAllowed !== null &&
+                ` of ${time(summary.secondsAllowed)} allowed`}
+            </dd>
+          </div>
+          {benchmark !== undefined && (
+            <div>
+              <dt>Readiness benchmark ({category})</dt>
+              <dd>
+                {benchmark}% ·{" "}
+                {summary.scorePercent >= benchmark
+                  ? "met in this attempt"
+                  : `${benchmark - summary.scorePercent} points below`}
+              </dd>
+            </div>
+          )}
+        </dl>
+        {benchmark !== undefined && (
+          <p className="analysis-note">
+            The benchmark is this app’s own practice target for your profile
+            category, not an official cut-off, rank or percentile.
+          </p>
+        )}
       </section>
-      <div className="section-heading">
-        <h2>Review every question</h2>
-        <label>
-          Show
-          <select
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value);
-              setLimit(15);
-            }}
+      {subjects.length > 0 && (
+        <section className="panel analysis-block" aria-labelledby="topics-h">
+          <h2 id="topics-h">Subject and topic breakdown</h2>
+          <p className="analysis-note">
+            Weakest first. Strong: {STRONG_ACCURACY}% or more correct · Needs
+            work: {WEAK_ACCURACY}–{STRONG_ACCURACY - 1}% · Weak: below{" "}
+            {WEAK_ACCURACY}%.
+          </p>
+          {subjects.map((s) => (
+            <div className="analysis-subject" key={s.subject}>
+              <h3>
+                {s.subject}{" "}
+                <span>
+                  {s.correct}/{s.total} correct · {s.accuracy}%
+                </span>
+              </h3>
+              <ul className="topic-rows">
+                {s.topics.map((t) => (
+                  <li key={t.topic}>
+                    <div className="topic-row-head">
+                      <strong>{t.topic}</strong>
+                      <span className={`badge ${tagClass(t.tag)}`}>{t.tag}</span>
+                    </div>
+                    <div
+                      className="meter"
+                      role="img"
+                      aria-label={`${t.accuracy}% correct`}
+                    >
+                      <span style={{ width: `${t.accuracy}%` }} />
+                    </div>
+                    <small>
+                      {t.correct} correct · {t.wrong} wrong · {t.skipped}{" "}
+                      skipped · {t.accuracy}% · {t.avgSeconds}s average vs{" "}
+                      {t.avgTarget}s target
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+      {timing && (
+        <section className="panel analysis-block" aria-labelledby="time-h">
+          <h2 id="time-h">Time analysis</h2>
+          <ul className="analysis-buckets">
+            <li>
+              <strong>Time sinks</strong>
+              <b>{timing.timeSinks.count}</b>
+              <small>
+                Wrong or skipped after more than {TIME_SINK_FACTOR}× the target
+                time · {time(timing.timeSinks.seconds)} spent ·{" "}
+                {fmt(timing.timeSinks.marksLost)} marks lost
+              </small>
+            </li>
+            <li>
+              <strong>Careless errors</strong>
+              <b>{timing.careless.count}</b>
+              <small>
+                Wrong in under {CARELESS_FACTOR}× the target time ·{" "}
+                {fmt(timing.careless.marksLost)} marks lost
+              </small>
+            </li>
+            <li>
+              <strong>Good skips</strong>
+              <b>{timing.goodSkips.count}</b>
+              <small>
+                Left blank within the target time, so no time was wasted ·{" "}
+                {fmt(timing.goodSkips.marksLost)} marks not earned, no penalty
+              </small>
+            </li>
+          </ul>
+        </section>
+      )}
+      {difficulty.length > 0 && (
+        <section className="panel analysis-block" aria-labelledby="diff-h">
+          <h2 id="diff-h">Difficulty breakdown</h2>
+          <ul className="topic-rows">
+            {difficulty.map((d) => (
+              <li key={d.difficulty}>
+                <div className="topic-row-head">
+                  <strong>{d.difficulty}</strong>
+                  <span className={`badge ${d.difficulty.toLowerCase()}`}>
+                    {d.accuracy}%
+                  </span>
+                </div>
+                <div
+                  className="meter"
+                  role="img"
+                  aria-label={`${d.accuracy}% correct on ${d.difficulty} questions`}
+                >
+                  <span style={{ width: `${d.accuracy}%` }} />
+                </div>
+                <small>
+                  {d.correct} of {d.total} correct
+                </small>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {trend && (
+        <section className="panel analysis-block" aria-labelledby="trend-h">
+          <h2 id="trend-h">Trend on this paper</h2>
+          <p className="analysis-note">
+            Versus your previous attempt: score {signed(trend.scoreChange)},
+            accuracy {signed(trend.accuracyChange, " pts")}, average time{" "}
+            {signed(trend.avgSecondsChange, "s")} per question.
+          </p>
+          <ol
+            className="trend-bars"
+            aria-label="Score in recent attempts, oldest first"
           >
-            <option value="all">All questions</option>
-            <option value="wrong">Wrong answers</option>
-            <option value="unanswered">Unanswered</option>
-            <option value="correct">Correct answers</option>
-          </select>
-        </label>
+            {trend.points.map((p, i) => (
+              <li
+                key={p.id}
+                className={i === trend.points.length - 1 ? "current" : ""}
+              >
+                <span
+                  className="trend-bar"
+                  style={{
+                    height: `${Math.max(4, (Math.max(0, p.score) / maxTrend) * 100)}%`,
+                  }}
+                />
+                <small>
+                  {fmt(p.score)}
+                  <span className="sr-only">
+                    {" "}
+                    marks, {p.accuracy}% accuracy, {p.avgSeconds}s per question,{" "}
+                    {new Date(p.date).toLocaleDateString("en-IN")}
+                  </span>
+                </small>
+                <small aria-hidden="true">
+                  {new Date(p.date).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </small>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      {a.review.length > 0 && (
+        <section className="panel analysis-block" aria-labelledby="plan-h">
+          <h2 id="plan-h">Action plan</h2>
+          {plan.length ? (
+            <ol className="action-plan">
+              {plan.map((step) => (
+                <li
+                  key={
+                    step.kind === "topic"
+                      ? `${step.subject}|${step.topic}`
+                      : "retry"
+                  }
+                >
+                  <div>
+                    <strong>{step.title}</strong>
+                    <p>{step.reason}</p>
+                  </div>
+                  {onStart && (
+                    <button
+                      className="secondary-button"
+                      onClick={() =>
+                        step.kind === "topic"
+                          ? startTopic(step.subject, step.topic)
+                          : retry(step.ids)
+                      }
+                    >
+                      {step.kind === "topic"
+                        ? "Start 20-question drill"
+                        : "Retry missed questions"}
+                      <ArrowRight size={16} />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="analysis-note">
+              Every question was correct. Take the next paper in the series.
+            </p>
+          )}
+          {planError && (
+            <p className="analysis-error" role="alert">
+              {planError}
+            </p>
+          )}
+        </section>
+      )}
+      <div className="section-heading review-filters">
+        <h2>Review every question</h2>
+        <div className="review-filter-fields">
+          <label>
+            Show
+            <select
+              value={filter}
+              onChange={(e) => {
+                setFilter(e.target.value);
+                setLimit(15);
+              }}
+            >
+              <option value="all">All questions</option>
+              <option value="wrong">Wrong answers</option>
+              <option value="unanswered">Unanswered</option>
+              <option value="correct">Correct answers</option>
+              {timing && <option value="timesink">Time sinks</option>}
+              {timing && <option value="careless">Careless errors</option>}
+              {a.marked && <option value="marked">Marked for review</option>}
+            </select>
+          </label>
+          {topicsInAttempt.length > 1 && (
+            <label>
+              Topic
+              <select
+                value={topicFilter}
+                onChange={(e) => {
+                  setTopicFilter(e.target.value);
+                  setLimit(15);
+                }}
+              >
+                <option value="all">All topics</option>
+                {topicsInAttempt.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
       </div>
       {!a.review.length ? (
         <Empty
@@ -449,12 +800,18 @@ export function AttemptReport({
           >
             <div className="question-meta">
               <span>
-                {r.question.subject} / {canonicalTopicFor(a.examId, r.question)}
+                {r.question.subject} / {reviewTopic(a, r)}
               </span>
               <span className={`badge ${r.result}`}>
                 {r.result} · {fmt(r.marks)} marks · {r.seconds}s
               </span>
             </div>
+            <p className="review-timing">
+              Your time {r.seconds}s · target {r.question.seconds}s
+              {isTimeSink(r) && " · time sink"}
+              {isCareless(r) && " · rushed"}
+              {marked.has(r.question.id) && " · marked for review"}
+            </p>
             <h3>
               {i + 1}. {r.question.question}
             </h3>
