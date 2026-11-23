@@ -5,6 +5,7 @@
   "start_date": "2026-11-03",
   "days": 90,
   "interval_days": 2,
+  "daily_from": "2026-11-24",
   "rotation_size": 3,
   "rotation_index": 1,
   "tasks": [
@@ -372,6 +373,332 @@
           "path": "scripts/validate-pyq-catalog.ts",
           "contains": [
             "import"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "severe-ap-si-question-bank",
+      "title": "Recognise the severe AP SI question bank",
+      "path": "docs/handbook/severe-ap-si-question-bank.md",
+      "body": "# Recognise the severe AP SI question bank\n\nVersion 2.1.0 added a severe bank of Hard AP SI practice items. Their ids begin with `sv`, and every item built through the shared helper is labelled Hard, carries a 120-second default allowance and shows the same source line: original severe practice, editorially authored and modelled on hard-question styles from recent recruitment exams.\n\nTreat these items as practice, not as historical questions. Arithmetic and reasoning items are generated in code with computed answers, and arrangement puzzles are solved by brute force so that only one arrangement fits. General Studies and AP Focus items are hand-written in multi-statement, match-the-list, chronological ordering and assertion-reason formats.\n\nRead the full explanation and hint after each attempt. A multi-statement question can be missed because of one statement, so check which statement caused the error before marking the whole topic as weak. Use the previous-paper archive when you need original booklets.\n\n## Implementation references\n\n- [src/questions/severeKit.ts](../../src/questions/severeKit.ts)\n- [src/data.ts](../../src/data.ts)\n- [src/questions/severeGsHistoryGeography.ts](../../src/questions/severeGsHistoryGeography.ts)\n",
+      "evidence": [
+        {
+          "path": "src/questions/severeKit.ts",
+          "contains": [
+            "export const SEVERE_SOURCE",
+            "export const SEVERE_PREFIX = 'sv'",
+            "difficulty: 'Hard'",
+            "seconds: input.seconds ?? 120"
+          ]
+        },
+        {
+          "path": "src/data.ts",
+          "contains": [
+            "severeArithmeticQuestions",
+            "severeApFocusQuestions"
+          ]
+        },
+        {
+          "path": "src/questions/severeGsHistoryGeography.ts",
+          "contains": [
+            "Match List I with List II.",
+            "Assertion (A):",
+            "Arrange the following in chronological order"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ap-si-difficulty-mix",
+      "title": "Understand how AP SI sets choose their difficulty mix",
+      "path": "docs/handbook/ap-si-difficulty-mix.md",
+      "body": "# Understand how AP SI sets choose their difficulty mix\n\nAP SI papers and AP practice sets use a dedicated selection policy. It targets 85% Hard, 12% Medium and the rest Easy, and within the Hard share it first reserves 85% for preferred items whose ids begin with `sv`, the severe bank. Remaining Hard places are filled from the other Hard items. NICL keeps the original default mix of 60% Hard, 30% Medium and 10% Easy.\n\nThe mix is applied after your filters. When Custom practice is limited to one difficulty, only that difficulty is eligible, so a Medium set stays Medium. If too few unique questions match, the app reports how many it needed and how many it found instead of padding the set with repeats.\n\nSelection is seeded. The same seed and pool give the same set, which is why a paper can be rebuilt consistently. Expect AP sets to feel harder than earlier releases; compare scores across versions with care.\n\n## Implementation references\n\n- [src/lib/examEngine.ts](../../src/lib/examEngine.ts)\n- [tests/severe-bank.test.ts](../../tests/severe-bank.test.ts)\n",
+      "evidence": [
+        {
+          "path": "src/lib/examEngine.ts",
+          "contains": [
+            "export const AP_SELECTION",
+            "mix: { Hard: 0.85, Medium: 0.12, Easy: 0.03 }",
+            "prefer: { test: (q) => q.id.startsWith(\"sv\"), share: 0.85 }",
+            "mix: { Hard: 0.6, Medium: 0.3, Easy: 0.1 }",
+            "examId === \"ap-si\" ? AP_SELECTION : DEFAULT_SELECTION"
+          ]
+        },
+        {
+          "path": "tests/severe-bank.test.ts",
+          "contains": [
+            "AP SI papers are overwhelmingly hard, mostly severe, and cap template families"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "template-family-caps",
+      "title": "Know why repeated question patterns are capped in AP sets",
+      "path": "docs/handbook/template-family-caps.md",
+      "body": "# Know why repeated question patterns are capped in AP sets\n\nOlder parts of the AP bank include parameterised templates: one sentence pattern with different numbers. To stop a single pattern recurring in one set, the AP policy groups questions into families by id and caps each family. Numeric `gqa-` and `gqr-` families allow one item per set. Knowledge-factory `xgs` and `xap` items allow two per frame and one per fact, and severe arithmetic frames allow two per set.\n\nThe caps are soft. When a small pool cannot fill the requested count, for example a saved-questions set made from one family, the capped items are added back so the session still starts with every requested question.\n\nCaps only influence which items are drawn; ids are never changed. When you add a new templated family, give it an id pattern the family function can recognise, or add a pattern for it. The severe test checks that no AP paper exceeds any family cap across several seeds.\n\n## Implementation references\n\n- [src/lib/examEngine.ts](../../src/lib/examEngine.ts)\n- [tests/severe-bank.test.ts](../../tests/severe-bank.test.ts)\n",
+      "evidence": [
+        {
+          "path": "src/lib/examEngine.ts",
+          "contains": [
+            "export const apTemplateFamilies",
+            "function applyFamilyCaps",
+            "Caps are soft: a small pool (e.g. saved questions) may still need capped items."
+          ]
+        },
+        {
+          "path": "tests/severe-bank.test.ts",
+          "contains": [
+            "soft caps still fill small pools",
+            "exceeds ${cap}"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "relabelled-numeric-templates",
+      "title": "Interpret the Medium label on older numeric templates",
+      "path": "docs/handbook/relabelled-numeric-templates.md",
+      "body": "# Interpret the Medium label on older numeric templates\n\nBefore 2.1.0 the generated quant and reasoning templates, ids beginning `gqa-` and `gqr-`, marked some variants Hard by position alone. When the bank is assembled, any of those items labelled Hard is now relabelled Medium. Their ids, wording, options and answers are untouched.\n\nThis matters in two places. A Hard filter in Custom practice now draws on harder items instead of number-swapped templates, and AP papers no longer count these templates towards their Hard share. If a saved question or mistake you remember as Hard now shows Medium, the label changed, not the question.\n\nSaved questions, mistakes and past attempts keep resolving because they are stored by id. Maintainers should keep that contract: correct labels at assembly time rather than renaming or rewriting existing items. The bank validator rejects any numeric template labelled Hard, and a test confirms that the old items still match their earlier text and answers.\n\n## Implementation references\n\n- [src/data.ts](../../src/data.ts)\n- [scripts/validate-question-bank.ts](../../scripts/validate-question-bank.ts)\n- [tests/severe-bank.test.ts](../../tests/severe-bank.test.ts)\n",
+      "evidence": [
+        {
+          "path": "src/data.ts",
+          "contains": [
+            "const relabelledTemplates: Question[]",
+            "item.difficulty === 'Hard' ? { ...item, difficulty: 'Medium' } : item"
+          ]
+        },
+        {
+          "path": "scripts/validate-question-bank.ts",
+          "contains": [
+            "numeric templates must not be labelled Hard"
+          ]
+        },
+        {
+          "path": "tests/severe-bank.test.ts",
+          "contains": [
+            "old ids still resolve, with unchanged text and answers"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "author-severe-items",
+      "title": "Author new severe items with the shared severe kit",
+      "path": "docs/handbook/author-severe-items.md",
+      "body": "# Author new severe items with the shared severe kit\n\nNew severe items should be built with the helpers in the severe kit rather than as hand-assembled objects. The `severe()` constructor rejects ids that do not start with `sv`, requires exactly four options and a whole-number answer index from 0 to 3, then fixes the difficulty to Hard and attaches the shared source line.\n\nFor options, `options4` places the correct answer at a seeded position among three distinct traps and throws when the traps collapse into duplicates. `numeric4` formats numeric traps with the same renderer and drops non-finite values. The kit's random generator is deterministic, so the bank is identical on every build.\n\nCheck `assemblyKey` for collisions. The bank is de-duplicated on letters and digits only, so two questions that differ only in symbols would be merged and one silently dropped. Then run the bank validator and the severe-bank tests before review.\n\n## Implementation references\n\n- [src/questions/severeKit.ts](../../src/questions/severeKit.ts)\n- [src/data.ts](../../src/data.ts)\n",
+      "evidence": [
+        {
+          "path": "src/questions/severeKit.ts",
+          "contains": [
+            "export const severe = (input: SevereInput): Question =>",
+            "export const options4",
+            "export const numeric4",
+            "export const assemblyKey",
+            "Deterministic PRNG so the bank is identical on every build."
+          ]
+        },
+        {
+          "path": "src/data.ts",
+          "contains": [
+            "const dedupeQuestions"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "severe-bank-validation-checks",
+      "title": "Read the severe-bank checks in the bank validator",
+      "path": "docs/handbook/severe-bank-validation-checks.md",
+      "body": "# Read the severe-bank checks in the bank validator\n\n`npm run validate:bank` includes checks dedicated to the severe bank. It requires at least 400 severe Arithmetic, 400 Reasoning, 250 General Studies and 150 AP Focus items. It rejects a subject whose answer key is unbalanced, meaning any option position holds less than 15% of that subject's answers.\n\nEvery severe item must be Hard, and the validator searches the question, options and explanation for rendering artefacts such as `NaN`, `undefined`, `Infinity` or `[object`. Those strings usually mean a generator interpolated a missing value.\n\nOn success it prints the total number of unique questions and, for each subject, the total, Hard and severe counts. Compare those counts with the previous run after a content change: a sudden fall in the severe count often means items were removed by de-duplication. Fix the generator or the wording; do not lower the minimums to make a failing run pass.\n\n## Implementation references\n\n- [scripts/validate-question-bank.ts](../../scripts/validate-question-bank.ts)\n- [package.json](../../package.json)\n",
+      "evidence": [
+        {
+          "path": "scripts/validate-question-bank.ts",
+          "contains": [
+            "const severeMinimum: Record<string, number> = { Arithmetic: 400, Reasoning: 400, 'General Studies': 250, 'AP Focus': 150 }",
+            "severe answer key is unbalanced",
+            "rendering artefact in text",
+            "severe items must be Hard"
+          ]
+        },
+        {
+          "path": "package.json",
+          "contains": [
+            "\"validate:bank\": \"tsx scripts/validate-question-bank.ts\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "severe-bank-regression-tests",
+      "title": "Run the severe-bank tests and the NICL fingerprint",
+      "path": "docs/handbook/severe-bank-regression-tests.md",
+      "body": "# Run the severe-bank tests and the NICL fingerprint\n\nThe severe-bank test file guards both content and selection. It confirms that every severe item reaches the assembled bank, that each has four distinct options, one valid answer and a real explanation and hint, and that answer positions in each subject fall between 15% and 35%. Every reasoning puzzle is re-solved and must have exactly one solution matching its key.\n\nSelection tests build AP papers for several seeds and require at least 84% Hard and 70% severe items, at most 15% legacy templates, and no family above its cap.\n\nThe final test is a fingerprint. It builds NICL papers and practice sets for fixed seeds and compares a SHA-256 digest of the selected ids with a recorded value, proving the AP change did not alter NICL selection. If it fails, find the cause before updating the digest; never update it just to make the run pass. Run the suite with `npm test`.\n\n## Implementation references\n\n- [tests/severe-bank.test.ts](../../tests/severe-bank.test.ts)\n- [src/questions/severeReasoning.ts](../../src/questions/severeReasoning.ts)\n- [package.json](../../package.json)\n",
+      "evidence": [
+        {
+          "path": "tests/severe-bank.test.ts",
+          "contains": [
+            "every reasoning puzzle re-solves to exactly one solution matching its key",
+            "NICL selection is byte-for-byte unchanged by the AP policy",
+            "createHash('sha256')"
+          ]
+        },
+        {
+          "path": "src/questions/severeReasoning.ts",
+          "contains": [
+            "export const severeReasoningSelfCheck"
+          ]
+        },
+        {
+          "path": "package.json",
+          "contains": [
+            "\"test\": \"tsx --test tests/*.test.ts\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "daily-challenge",
+      "title": "Use the daily challenge as a short timed check",
+      "path": "docs/handbook/daily-challenge.md",
+      "body": "# Use the daily challenge as a short timed check\n\nThe Study desk offers a daily challenge: ten questions with a 12-minute limit for the active exam, built from the same bank as Custom practice. For NICL, the selected stream decides whether IT Professional Knowledge questions are included. AP challenges follow the AP selection policy, so most items are Hard.\n\nThe set is seeded with the current date, so starting it again on the same day draws the same questions instead of a fresh set. Use a repeat as a check on what you corrected, not as new evidence of improvement. The date is read in UTC, so in India the set changes at 5:30 am rather than at midnight.\n\nOnly one test can be in progress. If a saved test is waiting, resume or submit it first; the challenge will not start over it. A completed challenge is saved as a practice attempt and appears in Performance.\n\n## Implementation references\n\n- [src/App.tsx](../../src/App.tsx)\n- [src/components/ExamPages.tsx](../../src/components/ExamPages.tsx)\n",
+      "evidence": [
+        {
+          "path": "src/App.tsx",
+          "contains": [
+            "title: `${exam.shortName} · Daily challenge`",
+            "count: 10",
+            "minutes: 12",
+            "new Date().toISOString().slice(0, 10).replaceAll(\"-\", \"\")",
+            "Resume or submit your saved test before starting another one."
+          ]
+        },
+        {
+          "path": "src/components/ExamPages.tsx",
+          "contains": [
+            "Start daily challenge",
+            "Daily challenge: 10 questions, 12 minutes"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "profile-name-and-targets",
+      "title": "Set your name, personal target date and daily study target",
+      "path": "docs/handbook/profile-name-and-targets.md",
+      "body": "# Set your name, personal target date and daily study target\n\nOpen **Profile & backup** from the sidebar or the avatar button to edit your profile. Your name is used in the Study desk greeting, and its first letter appears on the avatar button.\n\nThe personal target date is a planning date you choose. The dialog states that it is not an official exam date; always confirm schedules with the recruiting authority. The daily study target is in minutes and is kept between 15 and 1440, both when you type it and when a stored or imported profile is loaded. A new profile starts at 120 minutes.\n\nThese values belong to the profile, so they are included in exported backups and replaced when you import one. The Study desk's minutes figure is calculated from the time recorded in your attempts, not from the target you set. Keep the target realistic and compare it with recorded attempt time.\n\n## Implementation references\n\n- [src/App.tsx](../../src/App.tsx)\n- [src/lib/store.ts](../../src/lib/store.ts)\n",
+      "evidence": [
+        {
+          "path": "src/App.tsx",
+          "contains": [
+            "Personal target date",
+            "Daily study target (min)",
+            "This is your personal planning date, not an official exam date.",
+            "Math.max(15, Math.min(1440, Number(e.target.value)))"
+          ]
+        },
+        {
+          "path": "src/lib/store.ts",
+          "contains": [
+            "dailyMinutes: 120",
+            "Math.min(1440, finite(profile.dailyMinutes, 120))"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shareable-page-links",
+      "title": "Open a specific exam view with a page link",
+      "path": "docs/handbook/shareable-page-links.md",
+      "body": "# Open a specific exam view with a page link\n\nThe address bar records where you are. After each change of exam, page, stage or NICL stream, the app rewrites the query string with `exam`, `view` and `stage`, and with `stream` for NICL only. It also sets the browser tab title from the page label and exam name, ending with Exam Prep King.\n\nOpen a link such as `?exam=nicl-ao&view=tests&stage=mains&stream=it` to land on NICL Mains in the Test series for the IT stream. Unknown values fall back safely: an unrecognised view opens the Study desk, any stage other than `mains` opens Prelims, and any stream other than `it` opens Generalist.\n\nLinks carry only the location, never progress. Your attempts and saved questions still come from this device or your account, so a link shared with someone else opens the same page with their own history. Rewriting uses history replacement, so changing pages does not add entries to the browser's back history.\n\n## Implementation references\n\n- [src/App.tsx](../../src/App.tsx)\n",
+      "evidence": [
+        {
+          "path": "src/App.tsx",
+          "contains": [
+            "params.get(\"exam\") === \"nicl-ao\"",
+            "params.get(\"stage\") === \"mains\"",
+            "params.get(\"stream\") === \"it\"",
+            "window.history.replaceState(null, \"\", `?${p}`);",
+            "· Exam Prep King`"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "keyboard-and-accessibility-support",
+      "title": "Use keyboard, reduced-motion and contrast support",
+      "path": "docs/handbook/keyboard-and-accessibility-support.md",
+      "body": "# Use keyboard, reduced-motion and contrast support\n\nEach page starts with a **Skip to content** link that moves keyboard focus past the sidebar to the main content. The navigation marks the current page for screen readers, and buttons that show only an icon, such as the menu, avatar and dismiss controls, carry descriptive labels.\n\nDialogs, including Profile & backup and the mobile navigation, use the native modal dialog. Escape closes them, the page behind stops scrolling while one is open, and every dialog has a labelled close button.\n\nThe interface respects system preferences. With reduced motion requested, animations and transitions are turned off and smooth scrolling is disabled. In forced-colours or high-contrast modes, buttons and links use system colours. Maintainers should keep these guarantees: the browser suite runs axe checks against WCAG 2.1 AA tags, including a mobile run with reduced motion, and expects no violations.\n\n## Implementation references\n\n- [src/App.tsx](../../src/App.tsx)\n- [src/components/ui.tsx](../../src/components/ui.tsx)\n- [src/index.css](../../src/index.css)\n- [tests/app.spec.ts](../../tests/app.spec.ts)\n",
+      "evidence": [
+        {
+          "path": "src/App.tsx",
+          "contains": [
+            "Skip to content",
+            "aria-current={view === n.id ? \"page\" : undefined}",
+            "aria-label=\"Open navigation\""
+          ]
+        },
+        {
+          "path": "src/components/ui.tsx",
+          "contains": [
+            "node?.showModal();",
+            "onCancel={(event) => {",
+            "aria-label={`Close ${title}`}"
+          ]
+        },
+        {
+          "path": "src/index.css",
+          "contains": [
+            "@media (prefers-reduced-motion: reduce)",
+            "@media (forced-colors: active)"
+          ]
+        },
+        {
+          "path": "tests/app.spec.ts",
+          "contains": [
+            "AxeBuilder",
+            "wcag21aa",
+            "reducedMotion: \"reduce\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "android-build-and-sign-in-callback",
+      "title": "Build the Android app and keep its sign-in callback working",
+      "path": "docs/handbook/android-build-and-sign-in-callback.md",
+      "body": "# Build the Android app and keep its sign-in callback working\n\nThe Android app wraps the built web app with Capacitor. The configuration uses the app id `com.tpavan.lakshya`, the display name Exam Prep King and the `dist` folder as its web directory. `npm run android:sync` builds the web app and syncs it into the Android project; `npm run android:apk` also runs the Gradle debug build.\n\nSign-in works differently on the device. Inside the native app, Google sign-in opens in the system browser instead of redirecting the app's own page, and both Google and email sign-in return to `com.tpavan.lakshya://login-callback`. The app reads that link at launch or when it is opened, completes the session and closes the browser.\n\nChanging the app id therefore also means changing the callback scheme and the allowed redirect settings for sign-in. When releasing, update the version in `package.json`, the Android `versionName`, a higher `versionCode` and the sidebar version label together.\n\n## Implementation references\n\n- [capacitor.config.ts](../../capacitor.config.ts)\n- [package.json](../../package.json)\n- [src/hooks/useCloudSync.ts](../../src/hooks/useCloudSync.ts)\n- [android/app/build.gradle](../../android/app/build.gradle)\n",
+      "evidence": [
+        {
+          "path": "capacitor.config.ts",
+          "contains": [
+            "appId: 'com.tpavan.lakshya'",
+            "appName: 'Exam Prep King'",
+            "webDir: 'dist'"
+          ]
+        },
+        {
+          "path": "package.json",
+          "contains": [
+            "\"android:sync\": \"npm run build && cap sync android\"",
+            "\"android:apk\""
+          ]
+        },
+        {
+          "path": "src/hooks/useCloudSync.ts",
+          "contains": [
+            "const nativeRedirect = \"com.tpavan.lakshya://login-callback\";",
+            "skipBrowserRedirect: native",
+            "await Browser.open({ url: data.url });",
+            "\"appUrlOpen\""
+          ]
+        },
+        {
+          "path": "android/app/build.gradle",
+          "contains": [
+            "versionCode",
+            "versionName"
           ]
         }
       ]
