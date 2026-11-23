@@ -11,6 +11,10 @@ import { severeGsHistoryGeographyQuestions } from './questions/severeGsHistoryGe
 import { severeGsPolityEconomyScienceQuestions } from './questions/severeGsPolityEconomyScience'
 import { severeApFocusQuestions } from './questions/severeApFocus'
 import { severeReasoningQuestions } from './questions/severeReasoning'
+import { severeTopicArithmeticQuestions } from './questions/severeTopicArithmetic'
+import { severeTopicReasoningQuestions } from './questions/severeTopicReasoning'
+import { severeTopicApFocusQuestions } from './questions/severeTopicApFocus'
+import { canonicalTopic } from './topicTaxonomy'
 
 export type Subject = 'Arithmetic' | 'Reasoning' | 'General Studies' | 'AP Focus' | 'English' | 'General Awareness' | 'Computer Knowledge' | 'IT Professional Knowledge'
 
@@ -94,6 +98,11 @@ const relabelledTemplates: Question[] = generatedQuantReasoningQuestions.map(ite
   item.difficulty === 'Hard' ? { ...item, difficulty: 'Medium' } : item,
 )
 
+/**
+ * The assembled AP bank. Every AP-subject item is re-labelled with its
+ * canonical topic (src/topicTaxonomy.ts) so topic-wise practice offers one
+ * clean, syllabus-aligned list; ids, text, options and answers are untouched.
+ */
 export const questions: Question[] = dedupeQuestions([
   ...starterQuestions,
   ...quantQuestions,
@@ -110,7 +119,14 @@ export const questions: Question[] = dedupeQuestions([
   ...severeGsPolityEconomyScienceQuestions,
   ...severeGsHistoryGeographyQuestions,
   ...severeApFocusQuestions,
-])
+  // Topic top-up so every canonical AP topic has enough severe items for topic-wise practice.
+  ...severeTopicArithmeticQuestions,
+  ...severeTopicReasoningQuestions,
+  ...severeTopicApFocusQuestions,
+]).map(item => {
+  const topic = canonicalTopic(item)
+  return topic === item.topic ? item : { ...item, topic }
+})
 
 export type Topic = {
   id: string

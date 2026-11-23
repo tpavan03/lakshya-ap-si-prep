@@ -1,4 +1,5 @@
 import type { Question } from "../data";
+import { canonicalTopicFor, canonicalTopicNames } from "../topicTaxonomy";
 
 export type ExamId = "ap-si" | "nicl-ao";
 export type Stage = "prelims" | "mains";
@@ -494,6 +495,31 @@ export function selectQuestions(
         ...balancedSelection(candidates, target, seed + selected.length + 19),
       );
   }
+  // Hard-first beats template diversity: a narrow pool (one topic) whose hard
+  // items share a few frames takes capped Hard items before falling back to
+  // Medium/Easy. Large pools (papers) meet the Hard target within caps, so
+  // this never triggers there; policies without families have no overflow.
+  const hardShort =
+    hard - selected.filter((q) => q.difficulty === "Hard").length;
+  if (hardShort > 0 && overflow.length) {
+    const hardOverflow = overflow.filter((q) => q.difficulty === "Hard");
+    const preferred = policy.prefer
+      ? balancedSelection(
+          hardOverflow.filter(policy.prefer.test),
+          hardShort,
+          seed + 29,
+        )
+      : [];
+    const taken = new Set(preferred.map((q) => q.id));
+    selected.push(
+      ...preferred,
+      ...balancedSelection(
+        hardOverflow.filter((q) => !taken.has(q.id)),
+        hardShort - preferred.length,
+        seed + 31,
+      ),
+    );
+  }
   const used = new Set(selected.map((q) => q.id));
   selected.push(
     ...balancedSelection(
@@ -505,7 +531,11 @@ export function selectQuestions(
   // Caps are soft: a small pool (e.g. saved questions) may still need capped items.
   if (selected.length < count)
     selected.push(
-      ...balancedSelection(overflow, count - selected.length, seed + 83),
+      ...balancedSelection(
+        overflow.filter((q) => !used.has(q.id)),
+        count - selected.length,
+        seed + 83,
+      ),
     );
   return seededShuffle(selected, seed + 101);
 }
@@ -600,10 +630,17 @@ export function createPracticeQuiz(options: PracticeOptions): Quiz {
     throw new Error("Choose between 1 and 250 questions.");
   if (!Number.isFinite(minutes) || minutes < 1 || minutes > 360)
     throw new Error("Choose a time limit between 1 and 360 minutes.");
+  // AP topics are compared canonically, so a stored legacy name (e.g. "Ratio")
+  // still selects its canonical topic; NICL names pass through unchanged.
+  const wanted = topics?.length
+    ? new Set(
+        examId === "ap-si" ? topics.flatMap(canonicalTopicNames) : topics,
+      )
+    : null;
   const eligible = pool.filter(
     (q) =>
       (!subjects?.length || subjects.includes(q.subject)) &&
-      (!topics?.length || topics.includes(q.topic)) &&
+      (!wanted || wanted.has(canonicalTopicFor(examId, q))) &&
       (!difficulty || difficulty === "All" || q.difficulty === difficulty) &&
       (!questionIds || questionIds.includes(q.id)),
   );

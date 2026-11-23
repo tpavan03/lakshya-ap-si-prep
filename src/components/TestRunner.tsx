@@ -17,6 +17,7 @@ import {
   type Quiz,
 } from "../lib/examEngine";
 import { ACTIVE_QUIZ_KEY } from "../lib/store";
+import { canonicalTopicFor } from "../topicTaxonomy";
 import { Dialog, Empty, PageHead } from "./ui";
 
 export function TestRunner({
@@ -191,7 +192,7 @@ export function TestRunner({
         <main className="runner-question">
           <div className="question-meta">
             <span>
-              {item.subject} / {item.topic}
+              {item.subject} / {canonicalTopicFor(quiz.examId, item)}
             </span>
             <span>
               {quiz.mode === "practice"
@@ -448,7 +449,7 @@ export function AttemptReport({
           >
             <div className="question-meta">
               <span>
-                {r.question.subject} / {r.question.topic}
+                {r.question.subject} / {canonicalTopicFor(a.examId, r.question)}
               </span>
               <span className={`badge ${r.result}`}>
                 {r.result} · {fmt(r.marks)} marks · {r.seconds}s
