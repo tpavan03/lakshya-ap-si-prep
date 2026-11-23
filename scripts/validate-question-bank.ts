@@ -42,6 +42,21 @@ for (const subject of ['Arithmetic', 'Reasoning', 'General Studies', 'AP Focus',
   if (hardCount < 350) problems.push(`${subject}: requires at least 350 hard questions, received ${hardCount}`)
 }
 
+// Severe AP SI bank (ids `sv*`): hard-only, balanced keys, and enough volume per subject.
+const severe = questions.filter(item => item.id.startsWith('sv'))
+const severeMinimum: Record<string, number> = { Arithmetic: 400, Reasoning: 400, 'General Studies': 250, 'AP Focus': 150 }
+for (const [subject, minimum] of Object.entries(severeMinimum)) {
+  const items = severe.filter(item => item.subject === subject)
+  if (items.length < minimum) problems.push(`${subject}: expected at least ${minimum} severe questions, received ${items.length}`)
+  const positions = [0, 1, 2, 3].map(index => items.filter(item => item.answer === index).length)
+  if (items.length && positions.some(count => count / items.length < 0.15)) problems.push(`${subject}: severe answer key is unbalanced (${positions.join('/')})`)
+}
+for (const item of severe) {
+  if (item.difficulty !== 'Hard') problems.push(`${item.id}: severe items must be Hard`)
+  if (/NaN|undefined|Infinity|\[object/.test(`${item.question} ${item.options.join(' ')} ${item.explanation}`)) problems.push(`${item.id}: rendering artefact in text`)
+}
+for (const item of questions) if (/^gq[ar]-/.test(item.id) && item.difficulty === 'Hard') problems.push(`${item.id}: numeric templates must not be labelled Hard`)
+
 if (new Set(questions.slice(0, 100).map(item => item.id)).size !== 100) {
   problems.push('The full-mock pool cannot supply 100 unique ids')
 }
@@ -52,4 +67,4 @@ if (problems.length) {
 }
 
 console.log(`Validated ${questions.length} unique questions.`)
-for (const [subject, count] of distribution) console.log(`${subject}: ${count} total · ${hardDistribution[subject] ?? 0} hard`)
+for (const [subject, count] of distribution) console.log(`${subject}: ${count} total · ${hardDistribution[subject] ?? 0} hard · ${severe.filter(item => item.subject === subject).length} severe`)

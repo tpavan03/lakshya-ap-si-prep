@@ -6,6 +6,11 @@ import { hardQuantReasoningQuestions } from './questions/hardQuantReasoning'
 import { expandedEnglishQuestions } from './questions/expandedEnglish'
 import { generatedQuantReasoningQuestions } from './questions/generatedQuantReasoning'
 import { quantQuestions } from './questions/quant'
+import { severeArithmeticQuestions } from './questions/severeArithmetic'
+import { severeGsHistoryGeographyQuestions } from './questions/severeGsHistoryGeography'
+import { severeGsPolityEconomyScienceQuestions } from './questions/severeGsPolityEconomyScience'
+import { severeApFocusQuestions } from './questions/severeApFocus'
+import { severeReasoningQuestions } from './questions/severeReasoning'
 
 export type Subject = 'Arithmetic' | 'Reasoning' | 'General Studies' | 'AP Focus' | 'English' | 'General Awareness' | 'Computer Knowledge' | 'IT Professional Knowledge'
 
@@ -78,16 +83,33 @@ const dedupeQuestions = (items: Question[]) => {
   })
 }
 
+/**
+ * The `gqa-*` / `gqr-*` items are one sentence per family with numbers swapped;
+ * their generator marked three in five as 'Hard' by index alone. They keep their
+ * ids, text and answers (saved questions and mistakes still resolve), but are
+ * honestly labelled no harder than Medium so the Hard filter and AP papers draw
+ * on genuinely hard items.
+ */
+const relabelledTemplates: Question[] = generatedQuantReasoningQuestions.map(item =>
+  item.difficulty === 'Hard' ? { ...item, difficulty: 'Medium' } : item,
+)
+
 export const questions: Question[] = dedupeQuestions([
   ...starterQuestions,
   ...quantQuestions,
   ...hardQuantReasoningQuestions,
-  ...generatedQuantReasoningQuestions,
+  ...relabelledTemplates,
   ...generalStudiesQuestions,
   ...expandedGeneralStudiesQuestions,
   ...expandedApQuestions,
   ...apLanguageQuestions,
   ...expandedEnglishQuestions,
+  // Severe AP SI bank: editorially authored, computed or solver-checked (ids `sv*`).
+  ...severeArithmeticQuestions,
+  ...severeReasoningQuestions,
+  ...severeGsPolityEconomyScienceQuestions,
+  ...severeGsHistoryGeographyQuestions,
+  ...severeApFocusQuestions,
 ])
 
 export type Topic = {

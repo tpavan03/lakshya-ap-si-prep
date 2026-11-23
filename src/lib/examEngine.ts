@@ -388,36 +388,125 @@ function balancedSelection(
   return selected;
 }
 
+export type DifficultyMix = Record<Question["difficulty"], number>;
+/** A family key and how many items sharing that key one set may contain. */
+export type FamilyCap = readonly [key: string, cap: number];
+export type SelectionPolicy = {
+  mix: DifficultyMix;
+  families?: (q: Question) => readonly FamilyCap[];
+  /** Share of the Hard target reserved for preferred items (e.g. the severe bank). */
+  prefer?: { test: (q: Question) => boolean; share: number };
+};
+/** The original hard-weighted mix, used by NICL and by callers that pass no policy. */
+export const DEFAULT_SELECTION: SelectionPolicy = {
+  mix: { Hard: 0.6, Medium: 0.3, Easy: 0.1 },
+};
+
+/**
+ * AP SI papers and AP practice: overwhelmingly hard, and old parameterised
+ * templates are capped so one sentence pattern cannot recur within a set.
+ * - `gqa-*` / `gqr-*`: numeric template families → at most one per set.
+ * - `xgs*` / `xap*`: knowledge-factory frames → two per frame, one per fact.
+ * - `sva-<family>-f<frame>-*`: severe arithmetic frames → two per set.
+ * Ids are never changed; caps only affect which items are drawn.
+ */
+export const apTemplateFamilies = (q: Question): readonly FamilyCap[] => {
+  let match = q.id.match(/^(gq[ar]-[a-z]+)-\d+$/);
+  if (match) return [[match[1], 1]];
+  match = q.id.match(/^(xgs|xap)(\d+)v(\d+)$/);
+  if (match)
+    return [
+      [`${match[1]}-v${match[3]}`, 2],
+      [`${match[1]}${match[2]}`, 1],
+    ];
+  match = q.id.match(/^(sva-[a-z]+-f\d+)-\d+$/);
+  if (match) return [[match[1], 2]];
+  return [];
+};
+export const isLegacyTemplate = (q: Question) =>
+  /^(gq[ar]-[a-z]+-\d+|x(?:gs|ap)\d+v\d+)$/.test(q.id);
+export const AP_SELECTION: SelectionPolicy = {
+  mix: { Hard: 0.85, Medium: 0.12, Easy: 0.03 },
+  families: apTemplateFamilies,
+  prefer: { test: (q) => q.id.startsWith("sv"), share: 0.85 },
+};
+export const selectionPolicyFor = (examId: ExamId): SelectionPolicy =>
+  examId === "ap-si" ? AP_SELECTION : DEFAULT_SELECTION;
+
+// Splits the pool into items within their family caps and the overflow, in seeded order.
+function applyFamilyCaps(
+  pool: Question[],
+  seed: number,
+  families: SelectionPolicy["families"],
+): [Question[], Question[]] {
+  if (!families) return [pool, []];
+  const used = new Map<string, number>(),
+    allowed: Question[] = [],
+    overflow: Question[] = [];
+  for (const q of seededShuffle(pool, seed + 211)) {
+    const keys = families(q);
+    if (keys.every(([key, cap]) => (used.get(key) ?? 0) < cap)) {
+      keys.forEach(([key]) => used.set(key, (used.get(key) ?? 0) + 1));
+      allowed.push(q);
+    } else overflow.push(q);
+  }
+  return [allowed, overflow];
+}
+
 export function selectQuestions(
   pool: readonly Question[],
   count: number,
   seed = 1,
+  policy: SelectionPolicy = DEFAULT_SELECTION,
 ): Question[] {
   const unique = uniqueQuestions(pool);
   if (unique.length < count)
     throw new BankCoverageError("This set", count, unique.length);
+  const [allowed, overflow] = applyFamilyCaps(unique, seed, policy.families);
   const selected: Question[] = [];
+  const hard = Math.ceil(count * policy.mix.Hard),
+    medium = Math.floor(count * policy.mix.Medium);
   const targets: Array<[Question["difficulty"], number]> = [
-    ["Hard", Math.ceil(count * 0.6)],
-    ["Medium", Math.floor(count * 0.3)],
-    ["Easy", count - Math.ceil(count * 0.6) - Math.floor(count * 0.3)],
+    ["Hard", hard],
+    ["Medium", medium],
+    ["Easy", count - hard - medium],
   ];
-  for (const [difficulty, target] of targets)
-    selected.push(
-      ...balancedSelection(
-        unique.filter((q) => q.difficulty === difficulty),
-        target,
-        seed + selected.length + 19,
-      ),
-    );
+  for (const [difficulty, target] of targets) {
+    const candidates = allowed.filter((q) => q.difficulty === difficulty);
+    if (difficulty === "Hard" && policy.prefer) {
+      const { test, share } = policy.prefer;
+      const first = balancedSelection(
+        candidates.filter(test),
+        Math.ceil(target * share),
+        seed + 13,
+      );
+      const taken = new Set(first.map((q) => q.id));
+      selected.push(
+        ...first,
+        ...balancedSelection(
+          candidates.filter((q) => !taken.has(q.id)),
+          target - first.length,
+          seed + 19,
+        ),
+      );
+    } else
+      selected.push(
+        ...balancedSelection(candidates, target, seed + selected.length + 19),
+      );
+  }
   const used = new Set(selected.map((q) => q.id));
   selected.push(
     ...balancedSelection(
-      unique.filter((q) => !used.has(q.id)),
+      allowed.filter((q) => !used.has(q.id)),
       count - selected.length,
       seed + 71,
     ),
   );
+  // Caps are soft: a small pool (e.g. saved questions) may still need capped items.
+  if (selected.length < count)
+    selected.push(
+      ...balancedSelection(overflow, count - selected.length, seed + 83),
+    );
   return seededShuffle(selected, seed + 101);
 }
 
@@ -453,6 +542,7 @@ export function createExamQuiz(
       eligible,
       section.questions,
       seed * 937 + index * 71,
+      selectionPolicyFor(examId),
     );
     selected.forEach((q) => used.add(q.id));
     items.push(...selected);
@@ -518,7 +608,7 @@ export function createPracticeQuiz(options: PracticeOptions): Quiz {
       (!questionIds || questionIds.includes(q.id)),
   );
   const seed = options.seed ?? Date.now();
-  const items = selectQuestions(eligible, count, seed);
+  const items = selectQuestions(eligible, count, seed, selectionPolicyFor(examId));
   return {
     id: `${examId}-practice-${seed}`,
     examId,
