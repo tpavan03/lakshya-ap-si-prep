@@ -28,6 +28,13 @@
       "published_date": "2026-11-23",
       "published_at": "2026-11-22T21:06:06.137632+00:00",
       "source_commit": "0dc2a512a7a4d5e007b23f2bfcbfbe338297cc36"
+    },
+    {
+      "id": "read-objective-scores",
+      "slot": 13,
+      "published_date": "2026-11-26",
+      "published_at": "2026-11-25T23:41:09.151450+00:00",
+      "source_commit": "15984c1a41e007f7842e27634cca1eade1ba7cb0"
     }
   ]
 }
